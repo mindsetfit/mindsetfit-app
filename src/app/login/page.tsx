@@ -24,7 +24,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.email || !formData.senha) {
       toast.error('Por favor, preencha todos os campos');
       return;
@@ -35,7 +35,7 @@ export default function LoginPage() {
     try {
       // Buscar usuários cadastrados
       const usuarios = JSON.parse(localStorage.getItem('usuarios') || '[]');
-      
+
       // Verificar credenciais
       const usuario = usuarios.find(
         (u: any) => u.email === formData.email && u.senha === formData.senha
@@ -48,21 +48,23 @@ export default function LoginPage() {
       }
 
       // Salvar sessão do usuário
-      localStorage.setItem('usuarioLogado', JSON.stringify({
-        id: usuario.id,
-        nomeCompleto: usuario.nomeCompleto,
-        email: usuario.email,
-        telefone: usuario.telefone,
-        dataNascimento: usuario.dataNascimento
-      }));
+      localStorage.setItem(
+        'usuarioLogado',
+        JSON.stringify({
+          id: usuario.id,
+          nomeCompleto: usuario.nomeCompleto,
+          email: usuario.email,
+          telefone: usuario.telefone,
+          dataNascimento: usuario.dataNascimento,
+        })
+      );
 
       toast.success('Login realizado com sucesso!');
-      
+
       // Redirecionar para dashboard
       setTimeout(() => {
         router.push('/');
       }, 500);
-
     } catch (error) {
       toast.error('Erro ao fazer login. Tente novamente.');
       console.error('Erro no login:', error);
@@ -72,8 +74,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-slate-900/50 border-slate-800 backdrop-blur-sm">
+    <div className="min-h-[calc(100vh-2rem)] w-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center py-6">
+      <Card className="w-full max-w-md mx-auto bg-slate-900/60 border-slate-800 backdrop-blur-sm shadow-xl">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
@@ -87,6 +89,7 @@ export default function LoginPage() {
             Entre com suas credenciais para continuar
           </CardDescription>
         </CardHeader>
+
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
@@ -104,7 +107,7 @@ export default function LoginPage() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
+                  className="pl-10 bg-slate-800/60 border-slate-700 text-white placeholder:text-slate-500"
                 />
               </div>
             </div>
@@ -124,7 +127,7 @@ export default function LoginPage() {
                   value={formData.senha}
                   onChange={handleChange}
                   required
-                  className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
+                  className="pl-10 bg-slate-800/60 border-slate-700 text-white placeholder:text-slate-500"
                 />
               </div>
             </div>
