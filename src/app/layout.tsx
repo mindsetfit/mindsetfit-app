@@ -30,12 +30,18 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <head>
+        {/* viewport para mobile */}
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <Script src="/lasy-bridge.js" strategy="beforeInteractive" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen w-full bg-black text-white flex flex-col items-center`}
       >
-        {children}
+        {/* container centralizado com cara de app mobile */}
+        <main className="w-full max-w-[480px] px-4 py-4">
+          {children}
+        </main>
+
         <Toaster position="top-right" richColors />
       </body>
     </html>
