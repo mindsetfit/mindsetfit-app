@@ -1,201 +1,130 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { UserPlus, Mail, Phone, Calendar, Lock, User } from 'lucide-react';
-import { toast } from 'sonner';
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { UserPlus, Mail, Lock, Phone, Calendar } from "lucide-react";
+import { toast } from "sonner";
 
 export default function CadastroPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    nomeCompleto: '',
-    dataNascimento: '',
-    email: '',
-    telefone: '',
-    senha: '',
-    confirmarSenha: ''
+    nomeCompleto: "",
+    email: "",
+    telefone: "",
+    dataNascimento: "",
+    senha: "",
+    confirmarSenha: "",
   });
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    
-    // Formatação do telefone com DDD
-    if (name === 'telefone') {
-      let formatted = value.replace(/\D/g, '');
-      if (formatted.length <= 11) {
-        if (formatted.length > 2) {
-          formatted = `(${formatted.slice(0, 2)}) ${formatted.slice(2)}`;
-        }
-        if (formatted.length > 10) {
-          formatted = `${formatted.slice(0, 10)}-${formatted.slice(10)}`;
-        }
-        setFormData({ ...formData, [name]: formatted });
-      }
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const validateForm = () => {
-    // Validar nome completo
-    if (formData.nomeCompleto.trim().split(' ').length < 2) {
-      toast.error('Por favor, insira seu nome completo');
-      return false;
-    }
-
-    // Validar data de nascimento
-    if (!formData.dataNascimento) {
-      toast.error('Por favor, insira sua data de nascimento');
-      return false;
-    }
-
-    const dataNasc = new Date(formData.dataNascimento);
-    const hoje = new Date();
-    const idade = hoje.getFullYear() - dataNasc.getFullYear();
-    
-    if (idade < 13) {
-      toast.error('Você deve ter pelo menos 13 anos para se cadastrar');
-      return false;
-    }
-
-    // Validar email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      toast.error('Por favor, insira um email válido');
-      return false;
-    }
-
-    // Validar telefone
-    const telefoneNumeros = formData.telefone.replace(/\D/g, '');
-    if (telefoneNumeros.length < 10) {
-      toast.error('Por favor, insira um telefone válido com DDD');
-      return false;
-    }
-
-    // Validar senha
-    if (formData.senha.length < 6) {
-      toast.error('A senha deve ter no mínimo 6 caracteres');
-      return false;
-    }
-
-    // Validar confirmação de senha
-    if (formData.senha !== formData.confirmarSenha) {
-      toast.error('As senhas não coincidem');
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
+
+    if (
+      !formData.nomeCompleto ||
+      !formData.email ||
+      !formData.telefone ||
+      !formData.dataNascimento ||
+      !formData.senha ||
+      !formData.confirmarSenha
+    ) {
+      toast.error("Preencha todos os campos");
+      return;
+    }
+
+    if (formData.senha !== formData.confirmarSenha) {
+      toast.error("As senhas não conferem");
       return;
     }
 
     setLoading(true);
 
     try {
-      // Verificar se o email já está cadastrado
-      const usuarios = JSON.parse(localStorage.getItem('usuarios') || '[]');
-      const emailExiste = usuarios.find((u: any) => u.email === formData.email);
+      const usuarios = JSON.parse(localStorage.getItem("usuarios") || "[]");
 
-      if (emailExiste) {
-        toast.error('Este email já está cadastrado');
+      const jaExiste = usuarios.some(
+        (u: any) => u.email === formData.email
+      );
+
+      if (jaExiste) {
+        toast.error("Já existe um usuário com esse email");
         setLoading(false);
         return;
       }
 
-      // Salvar novo usuário
       const novoUsuario = {
-        id: Date.now().toString(),
+        id: Date.now(),
         nomeCompleto: formData.nomeCompleto,
-        dataNascimento: formData.dataNascimento,
         email: formData.email,
         telefone: formData.telefone,
-        senha: formData.senha, // Em produção, use hash!
-        dataCadastro: new Date().toISOString()
+        dataNascimento: formData.dataNascimento,
+        senha: formData.senha,
       };
 
-      usuarios.push(novoUsuario);
-      localStorage.setItem('usuarios', JSON.stringify(usuarios));
+      const novaLista = [...usuarios, novoUsuario];
+      localStorage.setItem("usuarios", JSON.stringify(novaLista));
 
-      toast.success('Cadastro realizado com sucesso!');
-      
-      // Redirecionar para login após 1 segundo
+      toast.success("Cadastro realizado com sucesso!");
+
       setTimeout(() => {
-        router.push('/login');
-      }, 1000);
-
+        router.push("/login");
+      }, 600);
     } catch (error) {
-      toast.error('Erro ao realizar cadastro. Tente novamente.');
-      console.error('Erro no cadastro:', error);
+      console.error("Erro no cadastro:", error);
+      toast.error("Erro ao cadastrar. Tente novamente.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-slate-900/50 border-slate-800 backdrop-blur-sm">
+    <div className="min-h-[calc(100vh-2rem)] w-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center py-6">
+      <Card className="w-full max-w-md mx-auto bg-slate-900/60 border-slate-800 backdrop-blur-sm shadow-xl">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
               <UserPlus className="w-8 h-8 text-white" />
             </div>
           </div>
           <CardTitle className="text-2xl font-bold text-center text-white">
-            Criar Conta
+            Criar conta
           </CardTitle>
           <CardDescription className="text-center text-slate-400">
-            Preencha seus dados para começar
+            Preencha seus dados para acessar o MindsetFit
           </CardDescription>
         </CardHeader>
+
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Nome Completo */}
+            {/* Nome */}
             <div className="space-y-2">
               <Label htmlFor="nomeCompleto" className="text-slate-200">
-                Nome Completo
+                Nome completo
               </Label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                <Input
-                  id="nomeCompleto"
-                  name="nomeCompleto"
-                  type="text"
-                  placeholder="João Silva Santos"
-                  value={formData.nomeCompleto}
-                  onChange={handleChange}
-                  required
-                  className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
-                />
-              </div>
-            </div>
-
-            {/* Data de Nascimento */}
-            <div className="space-y-2">
-              <Label htmlFor="dataNascimento" className="text-slate-200">
-                Data de Nascimento
-              </Label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                <Input
-                  id="dataNascimento"
-                  name="dataNascimento"
-                  type="date"
-                  value={formData.dataNascimento}
-                  onChange={handleChange}
-                  required
-                  className="pl-10 bg-slate-800/50 border-slate-700 text-white"
-                />
-              </div>
+              <Input
+                id="nomeCompleto"
+                name="nomeCompleto"
+                placeholder="Seu nome"
+                value={formData.nomeCompleto}
+                onChange={handleChange}
+                required
+                className="bg-slate-800/60 border-slate-700 text-white placeholder:text-slate-500"
+              />
             </div>
 
             {/* Email */}
@@ -213,7 +142,7 @@ export default function CadastroPage() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
+                  className="pl-10 bg-slate-800/60 border-slate-700 text-white placeholder:text-slate-500"
                 />
               </div>
             </div>
@@ -221,19 +150,37 @@ export default function CadastroPage() {
             {/* Telefone */}
             <div className="space-y-2">
               <Label htmlFor="telefone" className="text-slate-200">
-                Telefone com DDD
+                Telefone
               </Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                 <Input
                   id="telefone"
                   name="telefone"
-                  type="tel"
-                  placeholder="(11) 99999-9999"
+                  placeholder="(00) 00000-0000"
                   value={formData.telefone}
                   onChange={handleChange}
                   required
-                  className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
+                  className="pl-10 bg-slate-800/60 border-slate-700 text-white placeholder:text-slate-500"
+                />
+              </div>
+            </div>
+
+            {/* Data de nascimento */}
+            <div className="space-y-2">
+              <Label htmlFor="dataNascimento" className="text-slate-200">
+                Data de nascimento
+              </Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Input
+                  id="dataNascimento"
+                  name="dataNascimento"
+                  type="date"
+                  value={formData.dataNascimento}
+                  onChange={handleChange}
+                  required
+                  className="pl-10 bg-slate-800/60 border-slate-700 text-white placeholder:text-slate-500"
                 />
               </div>
             </div>
@@ -249,53 +196,49 @@ export default function CadastroPage() {
                   id="senha"
                   name="senha"
                   type="password"
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Crie uma senha"
                   value={formData.senha}
                   onChange={handleChange}
                   required
-                  className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
+                  className="pl-10 bg-slate-800/60 border-slate-700 text-white placeholder:text-slate-500"
                 />
               </div>
             </div>
 
-            {/* Confirmar Senha */}
+            {/* Confirmar senha */}
             <div className="space-y-2">
               <Label htmlFor="confirmarSenha" className="text-slate-200">
-                Confirmar Senha
+                Confirmar senha
               </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                <Input
-                  id="confirmarSenha"
-                  name="confirmarSenha"
-                  type="password"
-                  placeholder="Digite a senha novamente"
-                  value={formData.confirmarSenha}
-                  onChange={handleChange}
-                  required
-                  className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
-                />
-              </div>
+              <Input
+                id="confirmarSenha"
+                name="confirmarSenha"
+                type="password"
+                placeholder="Repita a senha"
+                value={formData.confirmarSenha}
+                onChange={handleChange}
+                required
+                className="bg-slate-800/60 border-slate-700 text-white placeholder:text-slate-500"
+              />
             </div>
 
-            {/* Botão de Cadastro */}
+            {/* Botão de cadastro */}
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold"
+              className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-semibold"
             >
-              {loading ? 'Cadastrando...' : 'Criar Conta'}
+              {loading ? "Cadastrando..." : "Cadastrar"}
             </Button>
 
-            {/* Link para Login */}
             <div className="text-center text-sm text-slate-400">
-              Já tem uma conta?{' '}
+              Já tem conta?{" "}
               <button
                 type="button"
-                onClick={() => router.push('/login')}
-                className="text-cyan-400 hover:text-cyan-300 font-semibold"
+                onClick={() => router.push("/login")}
+                className="text-emerald-400 hover:text-emerald-300 font-semibold"
               >
-                Fazer Login
+                Fazer login
               </button>
             </div>
           </form>
