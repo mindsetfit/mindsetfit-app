@@ -1,55 +1,59 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogIn, Mail, Lock } from 'lucide-react';
-import { toast } from 'sonner';
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { LogIn, Mail, Lock } from "lucide-react";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    email: '',
-    senha: ''
+    email: "",
+    senha: "",
   });
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.email || !formData.senha) {
-      toast.error('Por favor, preencha todos os campos');
+      toast.error("Por favor, preencha todos os campos");
       return;
     }
 
     setLoading(true);
 
     try {
-      // Buscar usuários cadastrados
-      const usuarios = JSON.parse(localStorage.getItem('usuarios') || '[]');
+      const usuarios = JSON.parse(localStorage.getItem("usuarios") || "[]");
 
-      // Verificar credenciais
       const usuario = usuarios.find(
-        (u: any) => u.email === formData.email && u.senha === formData.senha
+        (u: any) =>
+          u.email === formData.email && u.senha === formData.senha
       );
 
       if (!usuario) {
-        toast.error('Email ou senha incorretos');
+        toast.error("Email ou senha incorretos");
         setLoading(false);
         return;
       }
 
-      // Salvar sessão do usuário
       localStorage.setItem(
-        'usuarioLogado',
+        "usuarioLogado",
         JSON.stringify({
           id: usuario.id,
           nomeCompleto: usuario.nomeCompleto,
@@ -59,15 +63,14 @@ export default function LoginPage() {
         })
       );
 
-      toast.success('Login realizado com sucesso!');
+      toast.success("Login realizado com sucesso!");
 
-      // Redirecionar para dashboard
       setTimeout(() => {
-        router.push('/');
+        router.push("/");
       }, 500);
     } catch (error) {
-      toast.error('Erro ao fazer login. Tente novamente.');
-      console.error('Erro no login:', error);
+      console.error("Erro no login:", error);
+      toast.error("Erro ao fazer login. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -138,15 +141,15 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold"
             >
-              {loading ? 'Entrando...' : 'Entrar'}
+              {loading ? "Entrando..." : "Entrar"}
             </Button>
 
             {/* Link para Cadastro */}
             <div className="text-center text-sm text-slate-400">
-              Não tem uma conta?{' '}
+              Não tem uma conta?{" "}
               <button
                 type="button"
-                onClick={() => router.push('/cadastro')}
+                onClick={() => router.push("/cadastro")}
                 className="text-cyan-400 hover:text-cyan-300 font-semibold"
               >
                 Criar Conta
