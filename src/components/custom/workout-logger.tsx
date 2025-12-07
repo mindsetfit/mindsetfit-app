@@ -12,7 +12,8 @@ import {
   TrendingUp, 
   Calendar,
   Dumbbell,
-  X
+  X,
+  AlertCircle
 } from 'lucide-react';
 import { 
   WorkoutProgress, 
@@ -25,15 +26,51 @@ import { getExerciseById } from '@/lib/exercises-database';
 import { toast } from 'sonner';
 
 interface WorkoutLoggerProps {
-  trainingPlan: TrainingPlan;
-  workoutDayIndex: number;
+  trainingPlan?: TrainingPlan;
+  workoutDayIndex?: number;
 }
 
-export default function WorkoutLogger({ trainingPlan, workoutDayIndex }: WorkoutLoggerProps) {
+export default function WorkoutLogger({ trainingPlan, workoutDayIndex = 0 }: Partial<WorkoutLoggerProps> = {}) {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [sets, setSets] = useState<{ setNumber: number; weight: number; reps: number; completed: boolean }[]>([]);
   const [showReport, setShowReport] = useState(false);
   const [report, setReport] = useState<any>(null);
+
+  // Se não houver plano de treino, mostrar mensagem
+  if (!trainingPlan) {
+    return (
+      <Card className="bg-slate-900/50 border-slate-800">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <AlertCircle className="w-6 h-6 text-yellow-400" />
+            Nenhum Plano de Treino Ativo
+          </CardTitle>
+          <CardDescription>
+            Você precisa criar um plano de treino primeiro para registrar seus exercícios.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-gradient-to-r from-cyan-500/20 to-blue-600/20 p-6 rounded-xl border border-cyan-500/30 text-center">
+            <Dumbbell className="w-16 h-16 text-cyan-400 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-white mb-2">Comece Agora!</h3>
+            <p className="text-slate-300 mb-4">
+              Vá para a seção "Treinos Personalizados" e crie seu plano de treino personalizado.
+            </p>
+            <Button 
+              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700"
+              onClick={() => {
+                // Navegar para a página de treinos
+                const event = new CustomEvent('changePage', { detail: 'training' });
+                window.dispatchEvent(event);
+              }}
+            >
+              Criar Plano de Treino
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const workoutDay = trainingPlan.days[workoutDayIndex];
   const currentWorkoutExercise = workoutDay.exercises[currentExerciseIndex];

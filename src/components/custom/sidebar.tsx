@@ -1,17 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Activity,
-  Apple,
-  Dumbbell,
-  FileText,
-  Home,
-  Settings,
-  TrendingUp,
-  User,
-  ClipboardList,
-} from 'lucide-react';
+import { Activity, Apple, Dumbbell, FileText, Home, Moon, Settings, TrendingUp, User, Droplet, Clipboard } from 'lucide-react';
 
 interface SidebarProps {
   currentPage: string;
@@ -33,11 +23,7 @@ export default function Sidebar({ currentPage, onPageChange }: SidebarProps) {
   ];
 
   return (
-    <aside
-      className={`fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 to-slate-950 border-r border-slate-800 transition-all duration-300 z-50 ${
-        isCollapsed ? 'w-20' : 'w-64'
-      }`}
-    >
+    <aside className={`fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 to-slate-950 border-r border-slate-800 transition-all duration-300 z-50 ${isCollapsed ? 'w-20' : 'w-64'}`}>
       {/* Logo */}
       <div className="h-16 flex items-center justify-center border-b border-slate-800">
         <div className="flex items-center gap-3">
@@ -60,7 +46,7 @@ export default function Sidebar({ currentPage, onPageChange }: SidebarProps) {
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentPage === item.id;
-
+          
           return (
             <button
               key={item.id}
@@ -71,11 +57,7 @@ export default function Sidebar({ currentPage, onPageChange }: SidebarProps) {
                   : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
               }`}
             >
-              <Icon
-                className={`w-5 h-5 flex-shrink-0 ${
-                  isActive ? 'text-cyan-400' : ''
-                }`}
-              />
+              <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-cyan-400' : ''}`} />
               {!isCollapsed && (
                 <span className="font-medium text-left">{item.label}</span>
               )}
