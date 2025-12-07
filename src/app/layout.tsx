@@ -5,7 +5,7 @@ import Script from "next/script";
 import { Toaster } from "sonner";
 import "./globals.css";
 // Import all available fonts for AI usage
-// import "../lib/fonts";
+import "../lib/fonts";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
