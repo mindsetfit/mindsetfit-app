@@ -23,6 +23,11 @@ export default function DashboardPage() {
     age: 30,
     gender: 'male' as 'male' | 'female'
   });
+
+  // 👇 estados adicionados para atender WorkoutLoggerProps
+  const [trainingPlan, setTrainingPlan] = useState<any>(null);
+  const [workoutDayIndex, setWorkoutDayIndex] = useState(0);
+
   const [usuarioLogado, setUsuarioLogado] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -41,10 +46,10 @@ export default function DashboardPage() {
       setUsuarioLogado(usuario);
       
       // Atualizar userData com informações do usuário
-      setUserData({
-        ...userData,
+      setUserData((prev) => ({
+        ...prev,
         name: usuario.nomeCompleto.split(' ')[0] // Primeiro nome
-      });
+      }));
       
       setLoading(false);
     } catch (error) {
@@ -80,7 +85,12 @@ export default function DashboardPage() {
       case 'training':
         return <TrainingBuilder />;
       case 'workout-logger':
-        return <WorkoutLogger />;
+        return (
+          <WorkoutLogger
+            trainingPlan={trainingPlan}
+            workoutDayIndex={workoutDayIndex}
+          />
+        );
       default:
         return <DashboardStats userData={userData} />;
     }
