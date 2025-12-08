@@ -15,6 +15,11 @@ import {
   type PatientProfile,
   type DailyTarget,
 } from '@/lib/nutritionEngine';
+import {
+  generateMeals,
+  type Restriction,
+  type MealSuggestion,
+} from '@/lib/aiNutritionEngine';
 
 interface SectionProps {
   title: string;
@@ -274,14 +279,196 @@ export function MetabolismSection() {
   );
 }
 
-// 🔹 Nutrição & Dieta
+// 🔹 Nutrição & Dieta – AGORA USANDO IA
 export function NutritionSection() {
+  const [dailyKcal, setDailyKcal] = useState(2000);
+  const [protein, setProtein] = useState(160);
+  const [carbs, setCarbs] = useState(200);
+  const [fats, setFats] = useState(60);
+  const [mealsPerDay, setMealsPerDay] = useState(4);
+  const [restrictions, setRestrictions] = useState<Restriction[]>([]);
+  const [generatedMeals, setGeneratedMeals] = useState<MealSuggestion[] | null>(
+    null
+  );
+
+  const toggleRestriction = (r: Restriction) => {
+    setRestrictions((prev) =>
+      prev.includes(r) ? prev.filter((i) => i !== r) : [...prev, r]
+    );
+  };
+
+  const handleGenerate = () => {
+    const result = generateMeals({
+      dailyKcal,
+      protein,
+      carbs,
+      fats,
+      mealsPerDay,
+      restrictions,
+    });
+    setGeneratedMeals(result);
+  };
+
   return (
     <BaseSection
       title="Nutrição & Dieta"
-      description="Configure metas de macros, refeições do dia e use a IA Nutrition para montar os planos."
+      description="Use a IA Nutrition para montar refeições automáticas, já equilibradas em kcal e macros."
       icon={<Apple className="w-5 h-5 text-cyan-400" />}
-    />
+    >
+      <div className="space-y-6">
+        {/* Inputs principais */}
+        <div className="grid md:grid-cols-4 gap-4">
+          <div>
+            <label className="text-xs text-slate-400 mb-1 block">
+              Kcal diárias
+            </label>
+            <input
+              type="number"
+              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              value={dailyKcal}
+              onChange={(e) => setDailyKcal(Number(e.target.value))}
+              min={800}
+              max={6000}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-slate-400 mb-1 block">
+              Proteínas (g)
+            </label>
+            <input
+              type="number"
+              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              value={protein}
+              onChange={(e) => setProtein(Number(e.target.value))}
+              min={40}
+              max={350}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-slate-400 mb-1 block">
+              Carboidratos (g)
+            </label>
+            <input
+              type="number"
+              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              value={carbs}
+              onChange={(e) => setCarbs(Number(e.target.value))}
+              min={40}
+              max={600}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-slate-400 mb-1 block">
+              Gorduras (g)
+            </label>
+            <input
+              type="number"
+              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              value={fats}
+              onChange={(e) => setFats(Number(e.target.value))}
+              min={20}
+              max={200}
+            />
+          </div>
+        </div>
+
+        {/* Refeições por dia */}
+        <div>
+          <label className="text-xs text-slate-400 mb-1 block">
+            Refeições por dia
+          </label>
+          <select
+            className="w-full md:w-40 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+            value={mealsPerDay}
+            onChange={(e) => setMealsPerDay(Number(e.target.value))}
+          >
+            {[3, 4, 5, 6].map((m) => (
+              <option key={m} value={m}>
+                {m} refeições
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Restrições alimentares */}
+        <div className="space-y-2">
+          <p className="text-xs text-slate-400">Restrições alimentares</p>
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                'lactose',
+                'gluten',
+                'oleaginosa',
+                'ovo',
+                'vegetariano',
+                'vegano',
+                'diabetes',
+                'low_sodio',
+                'sem_acucar',
+              ] as Restriction[]
+            ).map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => toggleRestriction(r)}
+                className={`px-3 py-1.5 rounded-full text-xs border transition ${
+                  restrictions.includes(r)
+                    ? 'bg-cyan-600/80 border-cyan-400 text-white'
+                    : 'bg-slate-900 border-slate-700 text-slate-300'
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Botão gerar */}
+        <button
+          type="button"
+          onClick={handleGenerate}
+          className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-500/20"
+        >
+          Gerar dieta com IA
+        </button>
+
+        {/* Resultado */}
+        {generatedMeals && (
+          <div className="space-y-4 mt-4">
+            {generatedMeals.map((meal) => (
+              <div
+                key={meal.mealName}
+                className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-slate-100">
+                    {meal.mealName}
+                  </h3>
+                  <span className="text-xs text-slate-400">
+                    {meal.totalKcal} kcal • P {meal.protein}g • C {meal.carbs}g •
+                    G {meal.fats}g
+                  </span>
+                </div>
+
+                <ul className="text-xs text-slate-300 space-y-1">
+                  {meal.items.map((item, idx) => (
+                    <li key={idx}>
+                      <span className="text-cyan-400 font-medium">
+                        {item.food}
+                      </span>{' '}
+                      — {item.grams} g
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </BaseSection>
   );
 }
 
