@@ -1,3 +1,4 @@
+import { Activity, Apple, Dumbbell, FileText, TrendingUp, ClipboardList, User } from "lucide-react";
 'use client';
 
 import { useState } from 'react';
