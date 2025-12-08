@@ -1,0 +1,8 @@
+{
+  "/icon.svg/route": "/icon.svg",
+  "/_not-found/page": "/_not-found",
+  "/login/page": "/login",
+  "/cadastro/page": "/cadastro",
+  "/page": "/",
+  "/dashboard/page": "/dashboard"
+}

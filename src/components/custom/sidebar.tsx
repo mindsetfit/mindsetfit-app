@@ -1,8 +1,19 @@
-import { Activity, Apple, Dumbbell, FileText, TrendingUp, ClipboardList, User } from "lucide-react";
 'use client';
 
 import { useState } from 'react';
-import { Activity, Apple, Dumbbell, FileText, Home, Moon, Settings, TrendingUp, User, Droplet, Clipboard } from 'lucide-react';
+import {
+  Activity,
+  Apple,
+  Dumbbell,
+  FileText,
+  Home,
+  Moon,
+  Settings,
+  TrendingUp,
+  User,
+  Droplet,
+  ClipboardList,
+} from 'lucide-react';
 
 interface SidebarProps {
   currentPage: string;
