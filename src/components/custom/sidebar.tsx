@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Activity, Apple, Dumbbell, FileText, Home, Moon, Settings, TrendingUp, User, Droplet, Clipboard } from 'lucide-react';
+import { Activity, Apple, Dumbbell, FileText, Home, Moon, Settings, TrendingUp, User, Droplet, Clipboard, ClipboardList } from 'lucide-react';
 
 interface SidebarProps {
   currentPage: string;
@@ -17,7 +17,7 @@ export default function Sidebar({ currentPage, onPageChange }: SidebarProps) {
     { id: 'metabolism', label: 'Metabolismo', icon: Activity },
     { id: 'nutrition', label: 'Nutrição & Dieta', icon: Apple },
     { id: 'training', label: 'Treinos', icon: Dumbbell },
-    { id: 'workout-logger', label: 'Registro de Treinos', icon: ClipboardList },
+    { id: 'workout-logger', label: 'Registro de Treinos', icon: Clipboard },
     { id: 'progress', label: 'Progresso', icon: TrendingUp },
     { id: 'reports', label: 'Relatórios', icon: FileText },
   ];
