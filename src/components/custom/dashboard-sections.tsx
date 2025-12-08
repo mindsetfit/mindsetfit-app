@@ -454,16 +454,24 @@ export function NutritionSection() {
                 </div>
 
                 <ul className="text-xs text-slate-300 space-y-1">
-                  {meal.items.map((item, idx) => (
-                    <li key={idx}>
-                      <span className="text-cyan-400 font-medium">
-                        {item.food}
-                      </span>{' '}
-                      — {item.grams} g
-                    </li>
-                  ))}
-                </ul>
-              </div>
+  {meal.items.map((item, idx) => (
+    <li key={idx}>
+      <span className="text-cyan-400 font-medium">
+        {item.food}
+      </span>{' '}
+      — {item.grams} g
+      {item.equivalents && item.equivalents.length > 0 && (
+        <div className="text-[11px] text-slate-400 mt-0.5">
+          Substituições equivalentes:{' '}
+          <span className="text-slate-300">
+            {item.equivalents.join(', ')}
+          </span>
+        </div>
+      )}
+    </li>
+  ))}
+</ul>
+
             ))}
           </div>
         )}
