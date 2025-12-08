@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Activity,
   Apple,
@@ -66,8 +66,12 @@ export function AssessmentSection() {
   );
 }
 
-// 🔹 Metabolismo – agora com cálculo real
-export function MetabolismSection() {
+// 🔹 Metabolismo – agora com callback de resultado
+interface MetabolismSectionProps {
+  onResult?: (result: DailyTarget) => void;
+}
+
+export function MetabolismSection({ onResult }: MetabolismSectionProps) {
   const [profile, setProfile] = useState<PatientProfile>({
     weightKg: 75,
     heightCm: 175,
@@ -96,6 +100,10 @@ export function MetabolismSection() {
     e.preventDefault();
     const targets = calculateDailyTargets(profile);
     setResult(targets);
+
+    if (onResult) {
+      onResult(targets);
+    }
   };
 
   return (
@@ -280,7 +288,11 @@ export function MetabolismSection() {
 }
 
 // 🔹 Nutrição & Dieta – IA Nutrition + substituições + receita
-export function NutritionSection() {
+interface NutritionSectionProps {
+  metabolism?: DailyTarget | null;
+}
+
+export function NutritionSection({ metabolism }: NutritionSectionProps) {
   const [dailyKcal, setDailyKcal] = useState(2000);
   const [protein, setProtein] = useState(160);
   const [carbs, setCarbs] = useState(200);
@@ -290,6 +302,17 @@ export function NutritionSection() {
   const [generatedMeals, setGeneratedMeals] = useState<MealSuggestion[] | null>(
     null
   );
+
+  // 🔹 Quando vier resultado do Metabolismo, preenche automaticamente
+  useEffect(() => {
+    if (metabolism) {
+      setDailyKcal(metabolism.kcal);
+      setProtein(metabolism.protein);
+      setCarbs(metabolism.carbs);
+      setFats(metabolism.fats);
+      setMealsPerDay(metabolism.mealsPerDay);
+    }
+  }, [metabolism]);
 
   const toggleRestriction = (r: Restriction) => {
     setRestrictions((prev) =>

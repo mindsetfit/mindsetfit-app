@@ -1,12 +1,13 @@
 /*
   IA Nutrition Engine — MindsetFit
-  Versão 2.1 — distribuição por refeição + substituições equivalentes
+  Versão 2.2 — distribuição por refeição + substituições equivalentes + receitas base
 
   - recebe metas diárias (kcal e macros)
   - distribui por refeições (3 a 6 refeições)
   - filtra alimentos por restrições
   - gera combinações com proteína + carbo + gordura
   - adiciona lista de substituições equivalentes (mesma categoria / kcal parecida)
+  - gera uma receita base para cada refeição com ingredientes e modo de preparo
 */
 
 export type Restriction =
@@ -30,6 +31,13 @@ export interface FoodItem {
   restrictions?: Restriction[];
 }
 
+export interface RecipeSuggestion {
+  title: string;
+  description: string;
+  ingredients: string[];
+  method: string[];
+}
+
 export interface MealSuggestion {
   mealName: string;
   totalKcal: number;
@@ -37,6 +45,7 @@ export interface MealSuggestion {
   carbs: number;
   fats: number;
   items: Array<{ food: string; grams: number; equivalents?: string[] }>;
+  recipe?: RecipeSuggestion;
 }
 
 export interface IAInput {
@@ -173,10 +182,7 @@ function filterByRestrictions(
 }
 
 // 🔹 Substituições equivalentes por alimento
-function getEquivalents(
-  baseFood: FoodItem,
-  foods: FoodItem[]
-): string[] {
+function getEquivalents(baseFood: FoodItem, foods: FoodItem[]): string[] {
   const sameCategory = foods.filter(
     (f) => f.category === baseFood.category && f.name !== baseFood.name
   );
@@ -190,7 +196,34 @@ function getEquivalents(
   return equivalents.map((f) => f.name);
 }
 
-// 🔹 Gera refeições com base na distribuição por refeição + substituições
+// 🔹 Geração de receita base para a refeição
+function buildRecipeFromMeal(meal: MealSuggestion): RecipeSuggestion {
+  const title = `Prato MindsetFit de ${meal.mealName}`;
+
+  const ingredients = meal.items.map(
+    (item) => `${item.grams} g de ${item.food}`
+  );
+
+  const method: string[] = [
+    'Separe todos os ingredientes nas porções indicadas.',
+    'Prepare as fontes de proteína grelhando, cozinhando ou assando com o mínimo de óleo possível.',
+    'Cozinhe as fontes de carboidrato (como arroz ou batata doce) até ficarem macias, evitando excesso de óleo.',
+    'Monte o prato combinando proteína, carboidrato e vegetais/acompanhamientos de forma equilibrada.',
+    'Ajuste temperos com pouco sal, priorizando ervas, especiarias e limão.',
+  ];
+
+  const description =
+    'Receita base pensada para otimizar saciedade, aporte proteico e controle de calorias dentro da meta diária.';
+
+  return {
+    title,
+    description,
+    ingredients,
+    method,
+  };
+}
+
+// 🔹 Gera refeições com base na distribuição por refeição + substituições + receita
 export function generateMeals(input: IAInput): MealSuggestion[] {
   const allowedFoods = filterByRestrictions(foodDatabase, input.restrictions);
   const slots = getMealSlots(input.mealsPerDay);
@@ -245,6 +278,9 @@ export function generateMeals(input: IAInput): MealSuggestion[] {
         equivalents: getEquivalents(fatFood, allowedFoods),
       });
     }
+
+    // Monta receita base da refeição
+    meal.recipe = buildRecipeFromMeal(meal);
 
     meals.push(meal);
   }
