@@ -1,15 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Activity,
-  Apple,
-  Dumbbell,
-  FileText,
-  TrendingUp,
-  User,
-  ClipboardList,   // ✅ ADICIONADO
-} from 'lucide-react';
+import { Activity, Apple, Dumbbell, FileText, Home, Moon, Settings, TrendingUp, User, Droplet, Clipboard } from 'lucide-react';
 
 interface SidebarProps {
   currentPage: string;
