@@ -279,7 +279,7 @@ export function MetabolismSection() {
   );
 }
 
-// 🔹 Nutrição & Dieta – AGORA USANDO IA
+// 🔹 Nutrição & Dieta – IA Nutrition + substituições + receita
 export function NutritionSection() {
   const [dailyKcal, setDailyKcal] = useState(2000);
   const [protein, setProtein] = useState(160);
@@ -312,7 +312,7 @@ export function NutritionSection() {
   return (
     <BaseSection
       title="Nutrição & Dieta"
-      description="Use a IA Nutrition para montar refeições automáticas, já equilibradas em kcal e macros."
+      description="Use a IA Nutrition para montar refeições automáticas, já equilibradas em kcal e macros, com substituições e receitas base."
       icon={<Apple className="w-5 h-5 text-cyan-400" />}
     >
       <div className="space-y-6">
@@ -448,30 +448,62 @@ export function NutritionSection() {
                     {meal.mealName}
                   </h3>
                   <span className="text-xs text-slate-400">
-                    {meal.totalKcal} kcal • P {meal.protein}g • C {meal.carbs}g •
-                    G {meal.fats}g
+                    {meal.totalKcal} kcal • P {meal.protein}g • C {meal.carbs}g
+                    • G {meal.fats}g
                   </span>
                 </div>
 
+                {/* Alimentos + substituições */}
                 <ul className="text-xs text-slate-300 space-y-1">
-  {meal.items.map((item, idx) => (
-    <li key={idx}>
-      <span className="text-cyan-400 font-medium">
-        {item.food}
-      </span>{' '}
-      — {item.grams} g
-      {item.equivalents && item.equivalents.length > 0 && (
-        <div className="text-[11px] text-slate-400 mt-0.5">
-          Substituições equivalentes:{' '}
-          <span className="text-slate-300">
-            {item.equivalents.join(', ')}
-          </span>
-        </div>
-      )}
-    </li>
-  ))}
-</ul>
+                  {meal.items.map((item, idx) => (
+                    <li key={idx}>
+                      <span className="text-cyan-400 font-medium">
+                        {item.food}
+                      </span>{' '}
+                      — {item.grams} g
+                      {item.equivalents && item.equivalents.length > 0 && (
+                        <div className="text-[11px] text-slate-400 mt-0.5">
+                          Substituições equivalentes:{' '}
+                          <span className="text-slate-300">
+                            {item.equivalents.join(', ')}
+                          </span>
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
 
+                {/* Receita base da refeição */}
+                {meal.recipe && (
+                  <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+                    <p className="text-[11px] uppercase tracking-wide text-slate-500 mb-1">
+                      Sugestão de receita
+                    </p>
+                    <p className="text-sm font-semibold text-slate-100 mb-1">
+                      {meal.recipe.title}
+                    </p>
+                    <p className="text-xs text-slate-400 mb-2">
+                      {meal.recipe.description}
+                    </p>
+                    <p className="text-[11px] text-slate-400 font-semibold mb-1">
+                      Ingredientes:
+                    </p>
+                    <ul className="text-[11px] text-slate-300 list-disc list-inside mb-2 space-y-0.5">
+                      {meal.recipe.ingredients.map((ing, idx) => (
+                        <li key={idx}>{ing}</li>
+                      ))}
+                    </ul>
+                    <p className="text-[11px] text-slate-400 font-semibold mb-1">
+                      Modo de preparo:
+                    </p>
+                    <ol className="text-[11px] text-slate-300 list-decimal list-inside space-y-0.5">
+                      {meal.recipe.method.map((step, idx) => (
+                        <li key={idx}>{step}</li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}
