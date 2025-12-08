@@ -1,580 +1,198 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { LogOut } from 'lucide-react';
+
+import Sidebar from '@/components/custom/sidebar';
+import DashboardStats from '@/components/custom/dashboard-stats';
 import {
-  Activity,
-  Apple,
-  Dumbbell,
-  FileText,
-  TrendingUp,
-  ClipboardList,
-  User,
-} from 'lucide-react';
-import {
-  calculateDailyTargets,
-  type PatientProfile,
-  type DailyTarget,
-} from '@/lib/nutritionEngine';
-import {
-  generateMeals,
-  type Restriction,
-  type MealSuggestion,
-} from '@/lib/aiNutritionEngine';
+  AssessmentSection,
+  MetabolismSection,
+  NutritionSection,
+  TrainingSection,
+  WorkoutLoggerSection,
+  ProgressSection,
+  ReportsSection,
+} from '@/components/custom/dashboard-sections';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import type { DailyTarget } from '@/lib/nutritionEngine';
 
-interface SectionProps {
-  title: string;
-  description: string;
-  icon?: React.ReactNode;
-  children?: React.ReactNode;
-}
-
-function BaseSection({ title, description, icon, children }: SectionProps) {
-  return (
-    <section className="w-full max-w-5xl mx-auto">
-      <header className="mb-6 flex items-center gap-3">
-        {icon && (
-          <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center">
-            {icon}
-          </div>
-        )}
-        <div>
-          <h2 className="text-xl font-semibold text-slate-100">{title}</h2>
-          <p className="text-sm text-slate-400">{description}</p>
-        </div>
-      </header>
-
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
-        {children ?? (
-          <p className="text-sm text-slate-400">
-            Esta seção ainda está em construção. Em breve você poderá
-            configurar {title.toLowerCase()} aqui.
-          </p>
-        )}
-      </div>
-    </section>
-  );
-}
-
-// 🔹 Avaliação Física
-export function AssessmentSection() {
-  return (
-    <BaseSection
-      title="Avaliação Física"
-      description="Registre dados de composição corporal, dobras, circunferências e histórico do paciente."
-      icon={<User className="w-5 h-5 text-cyan-400" />}
-    />
-  );
-}
-
-// 🔹 Metabolismo – agora com callback de resultado
-interface MetabolismSectionProps {
-  onResult?: (result: DailyTarget) => void;
-}
-
-export function MetabolismSection({ onResult }: MetabolismSectionProps) {
-  const [profile, setProfile] = useState<PatientProfile>({
-    weightKg: 75,
-    heightCm: 175,
+export default function DashboardPage() {
+  const router = useRouter();
+  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [userData, setUserData] = useState({
+    name: 'Usuário',
+    weight: 75,
+    height: 175,
     age: 30,
-    sex: 'M',
-    activityLevel: 'moderate',
-    goal: 'maintenance',
+    gender: 'male' as 'male' | 'female',
   });
+  const [usuarioLogado, setUsuarioLogado] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [result, setResult] = useState<DailyTarget | null>(null);
-
-  const handleChange =
-    (field: keyof PatientProfile) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-      const value = e.target.value;
-      setProfile((prev) => ({
-        ...prev,
-        [field]:
-          field === 'weightKg' || field === 'heightCm' || field === 'age'
-            ? Number(value)
-            : (value as any),
-      }));
-    };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const targets = calculateDailyTargets(profile);
-    setResult(targets);
-
-    if (onResult) {
-      onResult(targets);
-    }
-  };
-
-  return (
-    <BaseSection
-      title="Metabolismo"
-      description="Calcule TMB aproximada, gasto diário e metas de macros a partir do perfil do paciente."
-      icon={<Activity className="w-5 h-5 text-cyan-400" />}
-    >
-      <form
-        onSubmit={handleSubmit}
-        className="grid gap-6 md:grid-cols-[2fr,3fr]"
-      >
-        {/* Formulário */}
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">
-                Peso (kg)
-              </label>
-              <input
-                type="number"
-                value={profile.weightKg}
-                onChange={handleChange('weightKg')}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-                min={30}
-                max={250}
-                step={0.1}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">
-                Altura (cm)
-              </label>
-              <input
-                type="number"
-                value={profile.heightCm ?? ''}
-                onChange={handleChange('heightCm')}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-                min={130}
-                max={220}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Idade</label>
-              <input
-                type="number"
-                value={profile.age ?? ''}
-                onChange={handleChange('age')}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-                min={12}
-                max={90}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">
-                Sexo biológico
-              </label>
-              <select
-                value={profile.sex ?? 'M'}
-                onChange={handleChange('sex')}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="M">Masculino</option>
-                <option value="F">Feminino</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">
-              Nível de atividade
-            </label>
-            <select
-              value={profile.activityLevel ?? 'moderate'}
-              onChange={handleChange('activityLevel')}
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="sedentary">Sedentário</option>
-              <option value="light">Leve (1–2x/sem)</option>
-              <option value="moderate">Moderado (3–5x/sem)</option>
-              <option value="high">Alto (6–7x/sem)</option>
-              <option value="athlete">Atleta</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">
-              Objetivo
-            </label>
-            <select
-              value={profile.goal}
-              onChange={handleChange('goal')}
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="loss">Emagrecimento</option>
-              <option value="maintenance">Manutenção</option>
-              <option value="gain">Ganho de massa</option>
-            </select>
-          </div>
-
-          <button
-            type="submit"
-            className="mt-2 inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-cyan-500/20"
-          >
-            Calcular Metabolismo
-          </button>
-        </div>
-
-        {/* Resultado */}
-        <div className="space-y-4">
-          {result ? (
-            <>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-                  <p className="text-xs text-slate-400 mb-1">
-                    Gasto diário estimado
-                  </p>
-                  <p className="text-2xl font-semibold text-cyan-400">
-                    {result.kcal} kcal
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Inclui TMB + fator de atividade + ajuste de objetivo.
-                  </p>
-                </div>
-                <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-                  <p className="text-xs text-slate-400 mb-1">
-                    Refeições por dia (padrão)
-                  </p>
-                  <p className="text-2xl font-semibold text-slate-100">
-                    {result.mealsPerDay}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Esse valor pode ser ajustado na montagem da dieta.
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-                <p className="text-xs text-slate-400 mb-3">
-                  Distribuição diária de macronutrientes
-                </p>
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-slate-400 text-xs mb-1">Proteínas</p>
-                    <p className="text-lg font-semibold text-emerald-400">
-                      {result.protein} g
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400 text-xs mb-1">Carboidratos</p>
-                    <p className="text-lg font-semibold text-sky-400">
-                      {result.carbs} g
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400 text-xs mb-1">Gorduras</p>
-                    <p className="text-lg font-semibold text-amber-400">
-                      {result.fats} g
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="h-full rounded-xl border border-dashed border-slate-700 bg-slate-900/40 p-4 flex items-center justify-center">
-              <p className="text-sm text-slate-500 text-center">
-                Preencha os dados ao lado e clique em{' '}
-                <span className="text-cyan-400 font-semibold">
-                  &quot;Calcular Metabolismo&quot;
-                </span>{' '}
-                para ver o gasto diário estimado e a sugestão de macros.
-              </p>
-            </div>
-          )}
-        </div>
-      </form>
-    </BaseSection>
-  );
-}
-
-// 🔹 Nutrição & Dieta – IA Nutrition + substituições + receita
-interface NutritionSectionProps {
-  metabolism?: DailyTarget | null;
-}
-
-export function NutritionSection({ metabolism }: NutritionSectionProps) {
-  const [dailyKcal, setDailyKcal] = useState(2000);
-  const [protein, setProtein] = useState(160);
-  const [carbs, setCarbs] = useState(200);
-  const [fats, setFats] = useState(60);
-  const [mealsPerDay, setMealsPerDay] = useState(4);
-  const [restrictions, setRestrictions] = useState<Restriction[]>([]);
-  const [generatedMeals, setGeneratedMeals] = useState<MealSuggestion[] | null>(
+  // 🔗 Resultado do metabolismo que será enviado para a Nutrição & IA
+  const [metabolismResult, setMetabolismResult] = useState<DailyTarget | null>(
     null
   );
 
-  // 🔹 Quando vier resultado do Metabolismo, preenche automaticamente
   useEffect(() => {
-    if (metabolism) {
-      setDailyKcal(metabolism.kcal);
-      setProtein(metabolism.protein);
-      setCarbs(metabolism.carbs);
-      setFats(metabolism.fats);
-      setMealsPerDay(metabolism.mealsPerDay);
+    // Verificar se o usuário está logado
+    const usuarioStr = localStorage.getItem('usuarioLogado');
+
+    if (!usuarioStr) {
+      // Se não estiver logado, redirecionar para home
+      router.push('/');
+      return;
     }
-  }, [metabolism]);
 
-  const toggleRestriction = (r: Restriction) => {
-    setRestrictions((prev) =>
-      prev.includes(r) ? prev.filter((i) => i !== r) : [...prev, r]
+    try {
+      const usuario = JSON.parse(usuarioStr);
+      setUsuarioLogado(usuario);
+
+      // Atualizar userData com informações do usuário
+      setUserData((prev) => ({
+        ...prev,
+        name: usuario.nomeCompleto.split(' ')[0], // Primeiro nome
+      }));
+
+      setLoading(false);
+    } catch (error) {
+      console.error('Erro ao carregar dados do usuário:', error);
+      router.push('/');
+    }
+  }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('usuarioLogado');
+    toast.success('Logout realizado com sucesso!');
+    router.push('/');
+  };
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'dashboard':
+        return <DashboardStats userData={userData} />;
+
+      case 'assessment':
+        return <AssessmentSection />;
+
+      case 'metabolism':
+        // Envia o resultado do cálculo para o estado local
+        return (
+          <MetabolismSection
+            onResult={(result) => {
+              setMetabolismResult(result);
+            }}
+          />
+        );
+
+      case 'nutrition':
+        // Recebe os dados já calculados do metabolismo (kcal + macros + nº de refeições)
+        return <NutritionSection metabolism={metabolismResult} />;
+
+      case 'training':
+        return <TrainingSection />;
+
+      case 'workout-logger':
+        return <WorkoutLoggerSection />;
+
+      case 'progress':
+        return <ProgressSection />;
+
+      case 'reports':
+        return <ReportsSection />;
+
+      default:
+        return <DashboardStats userData={userData} />;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+        <div className="text-white text-xl">Carregando...</div>
+      </div>
     );
-  };
-
-  const handleGenerate = () => {
-    const result = generateMeals({
-      dailyKcal,
-      protein,
-      carbs,
-      fats,
-      mealsPerDay,
-      restrictions,
-    });
-    setGeneratedMeals(result);
-  };
+  }
 
   return (
-    <BaseSection
-      title="Nutrição & Dieta"
-      description="Use a IA Nutrition para montar refeições automáticas, já equilibradas em kcal e macros, com substituições e receitas base."
-      icon={<Apple className="w-5 h-5 text-cyan-400" />}
-    >
-      <div className="space-y-6">
-        {/* Inputs principais */}
-        <div className="grid md:grid-cols-4 gap-4">
-          <div>
-            <label className="text-xs text-slate-400 mb-1 block">
-              Kcal diárias
-            </label>
-            <input
-              type="number"
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-              value={dailyKcal}
-              onChange={(e) => setDailyKcal(Number(e.target.value))}
-              min={800}
-              max={6000}
-            />
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
 
-          <div>
-            <label className="text-xs text-slate-400 mb-1 block">
-              Proteínas (g)
-            </label>
-            <input
-              type="number"
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-              value={protein}
-              onChange={(e) => setProtein(Number(e.target.value))}
-              min={40}
-              max={350}
-            />
-          </div>
+      <main className="ml-0 md:ml-64 p-4 md:p-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl md:text-4xl font-bold text-white mb-2">
+                {currentPage === 'dashboard' && 'Dashboard'}
+                {currentPage === 'assessment' && 'Avaliação Física'}
+                {currentPage === 'metabolism' && 'Cálculo Metabólico'}
+                {currentPage === 'nutrition' && 'Nutrição Inteligente com IA'}
+                {currentPage === 'training' && 'Treinos Personalizados'}
+                {currentPage === 'workout-logger' && 'Registro de Treinos'}
+                {currentPage === 'progress' && 'Progresso'}
+                {currentPage === 'reports' && 'Relatórios'}
+              </h1>
+              <p className="text-slate-400 text-sm md:text-base">
+                {currentPage === 'dashboard' && 'Visão geral do seu progresso'}
+                {currentPage === 'assessment' &&
+                  'Avalie sua composição corporal'}
+                {currentPage === 'metabolism' &&
+                  'Calcule suas necessidades calóricas e metas diárias.'}
+                {currentPage === 'nutrition' &&
+                  'IA inteligente para dieta personalizada, substituições e receitas.'}
+                {currentPage === 'training' &&
+                  'Sistema completo de treinos com 15+ exercícios por grupo muscular.'}
+                {currentPage === 'workout-logger' &&
+                  'Registre seus treinos e acompanhe sua evolução.'}
+                {currentPage === 'progress' &&
+                  'Visualize a evolução de peso, medidas e performance.'}
+                {currentPage === 'reports' &&
+                  'Gere relatórios profissionais para você ou para o paciente.'}
+              </p>
+            </div>
 
-          <div>
-            <label className="text-xs text-slate-400 mb-1 block">
-              Carboidratos (g)
-            </label>
-            <input
-              type="number"
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-              value={carbs}
-              onChange={(e) => setCarbs(Number(e.target.value))}
-              min={40}
-              max={600}
-            />
-          </div>
+            <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
+              <div className="px-3 py-1.5 md:px-4 md:py-2 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-600/20 border border-cyan-500/30">
+                <span className="text-cyan-400 font-semibold text-sm md:text-base">
+                  PRO
+                </span>
+              </div>
 
-          <div>
-            <label className="text-xs text-slate-400 mb-1 block">
-              Gorduras (g)
-            </label>
-            <input
-              type="number"
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-              value={fats}
-              onChange={(e) => setFats(Number(e.target.value))}
-              min={20}
-              max={200}
-            />
-          </div>
-        </div>
-
-        {/* Refeições por dia */}
-        <div>
-          <label className="text-xs text-slate-400 mb-1 block">
-            Refeições por dia
-          </label>
-          <select
-            className="w-full md:w-40 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-            value={mealsPerDay}
-            onChange={(e) => setMealsPerDay(Number(e.target.value))}
-          >
-            {[3, 4, 5, 6].map((m) => (
-              <option key={m} value={m}>
-                {m} refeições
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Restrições alimentares */}
-        <div className="space-y-2">
-          <p className="text-xs text-slate-400">Restrições alimentares</p>
-          <div className="flex flex-wrap gap-2">
-            {(
-              [
-                'lactose',
-                'gluten',
-                'oleaginosa',
-                'ovo',
-                'vegetariano',
-                'vegano',
-                'diabetes',
-                'low_sodio',
-                'sem_acucar',
-              ] as Restriction[]
-            ).map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => toggleRestriction(r)}
-                className={`px-3 py-1.5 rounded-full text-xs border transition ${
-                  restrictions.includes(r)
-                    ? 'bg-cyan-600/80 border-cyan-400 text-white'
-                    : 'bg-slate-900 border-slate-700 text-slate-300'
-                }`}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Botão gerar */}
-        <button
-          type="button"
-          onClick={handleGenerate}
-          className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-500/20"
-        >
-          Gerar dieta com IA
-        </button>
-
-        {/* Resultado */}
-        {generatedMeals && (
-          <div className="space-y-4 mt-4">
-            {generatedMeals.map((meal) => (
-              <div
-                key={meal.mealName}
-                className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-slate-100">
-                    {meal.mealName}
-                  </h3>
-                  <span className="text-xs text-slate-400">
-                    {meal.totalKcal} kcal • P {meal.protein}g • C {meal.carbs}g
-                    • G {meal.fats}g
+              <div className="flex items-center gap-2 md:gap-3 flex-1 md:flex-initial">
+                <div className="text-right flex-1 md:flex-initial">
+                  <p className="text-white font-semibold text-sm md:text-base truncate">
+                    {usuarioLogado?.nomeCompleto}
+                  </p>
+                  <p className="text-slate-400 text-xs md:text-sm truncate">
+                    {usuarioLogado?.email}
+                  </p>
+                </div>
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                  <span className="text-white font-bold text-base md:text-lg">
+                    {usuarioLogado?.nomeCompleto?.[0]}
                   </span>
                 </div>
-
-                {/* Alimentos + substituições */}
-                <ul className="text-xs text-slate-300 space-y-1">
-                  {meal.items.map((item, idx) => (
-                    <li key={idx}>
-                      <span className="text-cyan-400 font-medium">
-                        {item.food}
-                      </span>{' '}
-                      — {item.grams} g
-                      {item.equivalents && item.equivalents.length > 0 && (
-                        <div className="text-[11px] text-slate-400 mt-0.5">
-                          Substituições equivalentes:{' '}
-                          <span className="text-slate-300">
-                            {item.equivalents.join(', ')}
-                          </span>
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Receita base da refeição */}
-                {meal.recipe && (
-                  <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/70 p-3">
-                    <p className="text-[11px] uppercase tracking-wide text-slate-500 mb-1">
-                      Sugestão de receita
-                    </p>
-                    <p className="text-sm font-semibold text-slate-100 mb-1">
-                      {meal.recipe.title}
-                    </p>
-                    <p className="text-xs text-slate-400 mb-2">
-                      {meal.recipe.description}
-                    </p>
-                    <p className="text-[11px] text-slate-400 font-semibold mb-1">
-                      Ingredientes:
-                    </p>
-                    <ul className="text-[11px] text-slate-300 list-disc list-inside mb-2 space-y-0.5">
-                      {meal.recipe.ingredients.map((ing, idx) => (
-                        <li key={idx}>{ing}</li>
-                      ))}
-                    </ul>
-                    <p className="text-[11px] text-slate-400 font-semibold mb-1">
-                      Modo de preparo:
-                    </p>
-                    <ol className="text-[11px] text-slate-300 list-decimal list-inside space-y-0.5">
-                      {meal.recipe.method.map((step, idx) => (
-                        <li key={idx}>{step}</li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
               </div>
-            ))}
+
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                size="icon"
+                className="border-slate-700 bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white flex-shrink-0"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
-        )}
-      </div>
-    </BaseSection>
-  );
-}
+        </div>
 
-// 🔹 Treinos
-export function TrainingSection() {
-  return (
-    <BaseSection
-      title="Treinos"
-      description="Organize treinos por grupamento, volume, intensidade e período."
-      icon={<Dumbbell className="w-5 h-5 text-cyan-400" />}
-    />
-  );
-}
-
-// 🔹 Registro de Treinos
-export function WorkoutLoggerSection() {
-  return (
-    <BaseSection
-      title="Registro de Treinos"
-      description="Área para registrar execuções, cargas, percepções de esforço e histórico de sessões."
-      icon={<ClipboardList className="w-5 h-5 text-cyan-400" />}
-    />
-  );
-}
-
-// 🔹 Progresso
-export function ProgressSection() {
-  return (
-    <BaseSection
-      title="Progresso"
-      description="Visualize evolução de peso, medidas, composição corporal e performance."
-      icon={<TrendingUp className="w-5 h-5 text-emerald-400" />}
-    />
-  );
-}
-
-// 🔹 Relatórios
-export function ReportsSection() {
-  return (
-    <BaseSection
-      title="Relatórios"
-      description="Gere relatórios e resumos em formato visual e pronto para compartilhamento com o paciente."
-      icon={<FileText className="w-5 h-5 text-sky-400" />}
-    />
+        {/* Page Content */}
+        <div className="space-y-6">{renderPage()}</div>
+      </main>
+    </div>
   );
 }
