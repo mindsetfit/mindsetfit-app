@@ -1,13 +1,12 @@
 /*
   IA Nutrition Engine — MindsetFit
-  Versão 2.0 — com distribuição real por refeição
+  Versão 2.1 — distribuição por refeição + substituições equivalentes
 
-  O que este módulo faz:
   - recebe metas diárias (kcal e macros)
-  - aplica um perfil de distribuição por refeição (3 a 6 refeições)
+  - distribui por refeições (3 a 6 refeições)
   - filtra alimentos por restrições
-  - monta refeições com 1 fonte de proteína, 1 de carboidrato e 1 de gordura
-  - devolve refeições nomeadas (Café da manhã, Almoço, etc.)
+  - gera combinações com proteína + carbo + gordura
+  - adiciona lista de substituições equivalentes (mesma categoria / kcal parecida)
 */
 
 export type Restriction =
@@ -37,7 +36,7 @@ export interface MealSuggestion {
   protein: number;
   carbs: number;
   fats: number;
-  items: Array<{ food: string; grams: number }>;
+  items: Array<{ food: string; grams: number; equivalents?: string[] }>;
 }
 
 export interface IAInput {
@@ -66,6 +65,23 @@ const foodDatabase: FoodItem[] = [
     category: 'proteina',
   },
   {
+    name: 'Patinho moído',
+    kcal: 240,
+    protein: 27,
+    carbs: 0,
+    fats: 14,
+    category: 'proteina',
+  },
+  {
+    name: 'Ovo',
+    kcal: 155,
+    protein: 13,
+    carbs: 1.1,
+    fats: 11,
+    category: 'proteina',
+    restrictions: ['ovo'],
+  },
+  {
     name: 'Arroz branco',
     kcal: 128,
     protein: 2.5,
@@ -82,23 +98,6 @@ const foodDatabase: FoodItem[] = [
     category: 'carboidrato',
   },
   {
-    name: 'Ovo',
-    kcal: 155,
-    protein: 13,
-    carbs: 1.1,
-    fats: 11,
-    category: 'proteina',
-    restrictions: ['ovo'],
-  },
-  {
-    name: 'Banana',
-    kcal: 89,
-    protein: 1.1,
-    carbs: 23,
-    fats: 0.3,
-    category: 'fruta',
-  },
-  {
     name: 'Aveia',
     kcal: 389,
     protein: 17,
@@ -108,12 +107,12 @@ const foodDatabase: FoodItem[] = [
     restrictions: ['gluten'],
   },
   {
-    name: 'Patinho moído',
-    kcal: 240,
-    protein: 27,
-    carbs: 0,
-    fats: 14,
-    category: 'proteina',
+    name: 'Banana',
+    kcal: 89,
+    protein: 1.1,
+    carbs: 23,
+    fats: 0.3,
+    category: 'fruta',
   },
   {
     name: 'Azeite',
@@ -158,7 +157,7 @@ function getMealSlots(mealsPerDay: number): MealSlot[] {
         { key: 'pre_workout', label: 'Pré-treino', ratio: 0.12 },
         { key: 'post_workout', label: 'Pós-treino', ratio: 0.12 },
         { key: 'dinner', label: 'Jantar', ratio: 0.2 },
-      ].slice(0, mealsPerDay); // se alguém mandar >6, corta
+      ].slice(0, mealsPerDay);
   }
 }
 
@@ -173,7 +172,25 @@ function filterByRestrictions(
   });
 }
 
-// 🔹 Gera refeições com base na distribuição por refeição
+// 🔹 Substituições equivalentes por alimento
+function getEquivalents(
+  baseFood: FoodItem,
+  foods: FoodItem[]
+): string[] {
+  const sameCategory = foods.filter(
+    (f) => f.category === baseFood.category && f.name !== baseFood.name
+  );
+
+  // Equivalentes com kcal próximas (±20%)
+  const equivalents = sameCategory.filter((f) => {
+    const diff = Math.abs(f.kcal - baseFood.kcal) / baseFood.kcal;
+    return diff <= 0.2;
+  });
+
+  return equivalents.map((f) => f.name);
+}
+
+// 🔹 Gera refeições com base na distribuição por refeição + substituições
 export function generateMeals(input: IAInput): MealSuggestion[] {
   const allowedFoods = filterByRestrictions(foodDatabase, input.restrictions);
   const slots = getMealSlots(input.mealsPerDay);
@@ -199,20 +216,34 @@ export function generateMeals(input: IAInput): MealSuggestion[] {
       items: [],
     };
 
-    // Cálculo em gramas baseado nos macros da refeição
+    // Proteína
     if (proteinFood && mealProtein > 0 && proteinFood.protein > 0) {
       const grams = Math.round((mealProtein / proteinFood.protein) * 100);
-      meal.items.push({ food: proteinFood.name, grams });
+      meal.items.push({
+        food: proteinFood.name,
+        grams,
+        equivalents: getEquivalents(proteinFood, allowedFoods),
+      });
     }
 
+    // Carboidrato
     if (carbFood && mealCarbs > 0 && carbFood.carbs > 0) {
       const grams = Math.round((mealCarbs / carbFood.carbs) * 100);
-      meal.items.push({ food: carbFood.name, grams });
+      meal.items.push({
+        food: carbFood.name,
+        grams,
+        equivalents: getEquivalents(carbFood, allowedFoods),
+      });
     }
 
+    // Gordura
     if (fatFood && mealFats > 0 && fatFood.fats > 0) {
       const grams = Math.round((mealFats / fatFood.fats) * 100);
-      meal.items.push({ food: fatFood.name, grams });
+      meal.items.push({
+        food: fatFood.name,
+        grams,
+        equivalents: getEquivalents(fatFood, allowedFoods),
+      });
     }
 
     meals.push(meal);
