@@ -5,36 +5,31 @@ import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 import Sidebar from '@/components/custom/sidebar';
 import AssessmentForm from '@/components/custom/assessment-form';
+import NutritionCalculator from '@/components/custom/nutrition-calculator';
 import TrainingBuilder from '@/components/custom/training-builder';
 import DashboardStats from '@/components/custom/dashboard-stats';
+import NutritionAI from '@/components/custom/nutrition-ai';
 import WorkoutLogger from '@/components/custom/workout-logger';
-import { MetabolismSection, NutritionSection } from '@/components/custom/dashboard-sections';
-import type { DailyTarget } from '@/lib/nutritionEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 export default function DashboardPage() {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState('dashboard');
-
   const [userData, setUserData] = useState({
     name: 'Usuário',
     weight: 75,
     height: 175,
     age: 30,
-    gender: 'male' as 'male' | 'female',
+    gender: 'male' as 'male' | 'female'
   });
-
   const [usuarioLogado, setUsuarioLogado] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
-  // 🔹 Estado global do resultado do metabolismo
-  const [metabolismResult, setMetabolismResult] = useState<DailyTarget | null>(null);
 
   useEffect(() => {
     // Verificar se o usuário está logado
     const usuarioStr = localStorage.getItem('usuarioLogado');
-
+    
     if (!usuarioStr) {
       // Se não estiver logado, redirecionar para home
       router.push('/');
@@ -44,13 +39,13 @@ export default function DashboardPage() {
     try {
       const usuario = JSON.parse(usuarioStr);
       setUsuarioLogado(usuario);
-
+      
       // Atualizar userData com informações do usuário
-      setUserData((prev) => ({
-        ...prev,
-        name: usuario.nomeCompleto.split(' ')[0], // Primeiro nome
-      }));
-
+      setUserData({
+        ...userData,
+        name: usuario.nomeCompleto.split(' ')[0] // Primeiro nome
+      });
+      
       setLoading(false);
     } catch (error) {
       console.error('Erro ao carregar dados do usuário:', error);
@@ -64,45 +59,6 @@ export default function DashboardPage() {
     router.push('/');
   };
 
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'dashboard':
-        return <DashboardStats userData={userData} />;
-
-      case 'assessment':
-        return (
-          <AssessmentForm
-            onSave={(data) => {
-              console.log('Assessment saved:', data);
-            }}
-          />
-        );
-
-      case 'metabolism':
-        // 🔹 Quando o metabolismo for calculado, salvamos o resultado
-        return (
-          <MetabolismSection
-            onResult={(result) => {
-              setMetabolismResult(result);
-            }}
-          />
-        );
-
-      case 'nutrition':
-        // 🔹 Nutrição recebe o metabolismo calculado (se existir)
-        return <NutritionSection metabolism={metabolismResult} />;
-
-      case 'training':
-        return <TrainingBuilder />;
-
-      case 'workout-logger':
-        return <WorkoutLogger />;
-
-      default:
-        return <DashboardStats userData={userData} />;
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
@@ -111,10 +67,29 @@ export default function DashboardPage() {
     );
   }
 
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'dashboard':
+        return <DashboardStats userData={userData} />;
+      case 'assessment':
+        return <AssessmentForm onSave={(data) => console.log('Assessment saved:', data)} />;
+      case 'metabolism':
+        return <NutritionCalculator userData={userData} />;
+      case 'nutrition':
+        return <NutritionAI />;
+      case 'training':
+        return <TrainingBuilder />;
+      case 'workout-logger':
+        return <WorkoutLogger />;
+      default:
+        return <DashboardStats userData={userData} />;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
-
+      
       <main className="ml-0 md:ml-64 p-4 md:p-8">
         {/* Header */}
         <div className="mb-8">
@@ -131,32 +106,22 @@ export default function DashboardPage() {
               <p className="text-slate-400 text-sm md:text-base">
                 {currentPage === 'dashboard' && 'Visão geral do seu progresso'}
                 {currentPage === 'assessment' && 'Avalie sua composição corporal'}
-                {currentPage === 'metabolism' &&
-                  'Calcule suas necessidades calóricas e metas diárias de macros'}
-                {currentPage === 'nutrition' &&
-                  'IA inteligente para dieta personalizada + receitas completas'}
-                {currentPage === 'training' &&
-                  'Sistema completo de treinos com 15+ exercícios por grupo muscular'}
-                {currentPage === 'workout-logger' &&
-                  'Registre seus treinos e acompanhe sua evolução'}
+                {currentPage === 'metabolism' && 'Calcule suas necessidades calóricas'}
+                {currentPage === 'nutrition' && 'IA inteligente para dieta personalizada + receitas completas'}
+                {currentPage === 'training' && 'Sistema completo de treinos com 15+ exercícios por grupo muscular'}
+                {currentPage === 'workout-logger' && 'Registre seus treinos e acompanhe sua evolução'}
               </p>
             </div>
-
+            
             <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
               <div className="px-3 py-1.5 md:px-4 md:py-2 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-600/20 border border-cyan-500/30">
-                <span className="text-cyan-400 font-semibold text-sm md:text-base">
-                  PRO
-                </span>
+                <span className="text-cyan-400 font-semibold text-sm md:text-base">PRO</span>
               </div>
-
+              
               <div className="flex items-center gap-2 md:gap-3 flex-1 md:flex-initial">
                 <div className="text-right flex-1 md:flex-initial">
-                  <p className="text-white font-semibold text-sm md:text-base truncate">
-                    {usuarioLogado?.nomeCompleto}
-                  </p>
-                  <p className="text-slate-400 text-xs md:text-sm truncate">
-                    {usuarioLogado?.email}
-                  </p>
+                  <p className="text-white font-semibold text-sm md:text-base truncate">{usuarioLogado?.nomeCompleto}</p>
+                  <p className="text-slate-400 text-xs md:text-sm truncate">{usuarioLogado?.email}</p>
                 </div>
                 <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-bold text-base md:text-lg">
@@ -164,7 +129,7 @@ export default function DashboardPage() {
                   </span>
                 </div>
               </div>
-
+              
               <Button
                 onClick={handleLogout}
                 variant="outline"
@@ -178,7 +143,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Page Content */}
-        <div className="space-y-6">{renderPage()}</div>
+        <div className="space-y-6">
+          {renderPage()}
+        </div>
       </main>
     </div>
   );
