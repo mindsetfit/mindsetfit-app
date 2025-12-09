@@ -348,7 +348,7 @@ function generateSpinning(selection: TrainingSelection): GeneratedWorkout[] {
   const level = (selection.level || 'iniciante') as TrainingLevel;
   const time = selection.time || 40;
 
-  return spinningTemplates.slice(0, 3).map((tpl, idx) => ({
+  return spinningTemplates.map((tpl, idx) => ({
     ...tpl,
     mode: 'spinning' as const,
     level,
@@ -578,7 +578,7 @@ function generateCrossfit(selection: TrainingSelection): GeneratedWorkout[] {
   const level = (selection.level || 'iniciante') as TrainingLevel;
   const time = selection.time || 30;
 
-  return crossfitTemplates.slice(0, 3).map((tpl, idx) => ({
+  return crossfitTemplates.map((tpl, idx) => ({
     ...tpl,
     mode: 'crossfit' as const,
     level,
