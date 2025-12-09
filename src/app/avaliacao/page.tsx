@@ -103,8 +103,18 @@ export default function AvaliacaoPage() {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     console.log('Avaliação física enviada:', form);
+
+    // Salva avaliação localmente para uso nas próximas etapas
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('avaliacao_fisica', JSON.stringify(form));
+      } catch (err) {
+        console.error('Erro ao salvar avaliação no localStorage:', err);
+      }
+    }
+
     alert(
-      'Avaliação salva localmente (console). Integração com banco pode ser feita depois.'
+      'Avaliação salva localmente (console e navegador). Integração com banco pode ser feita depois.'
     );
   };
 
