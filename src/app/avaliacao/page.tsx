@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, ChangeEvent, FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -89,6 +90,7 @@ const initialState: AvaliacaoFormState = {
 };
 
 export default function AvaliacaoPage() {
+  const router = useRouter();
   const [form, setForm] = useState<AvaliacaoFormState>(initialState);
 
   const handleChange = (
@@ -101,7 +103,9 @@ export default function AvaliacaoPage() {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     console.log('Avaliação física enviada:', form);
-    alert('Avaliação salva localmente (console). Integração com banco pode ser feita depois.');
+    alert(
+      'Avaliação salva localmente (console). Integração com banco pode ser feita depois.'
+    );
   };
 
   const cinturaNum = parseFloat(form.cintura || '');
@@ -127,9 +131,9 @@ export default function AvaliacaoPage() {
           Avaliação Física Completa
         </h1>
         <p className="text-slate-400 text-sm md:text-base">
-          Registre aqui os resultados da sua avaliação física: dados básicos, bioimpedância,
-          medidas, dobras cutâneas e RCQ. Essas informações vão alimentar toda
-          a inteligência do app (metabolismo, dieta e treinos).
+          Registre aqui os resultados da sua avaliação física: dados básicos,
+          bioimpedância, medidas, dobras cutâneas e RCQ. Essas informações vão
+          alimentar toda a inteligência do app (metabolismo, dieta e treinos).
         </p>
       </div>
 
@@ -144,7 +148,8 @@ export default function AvaliacaoPage() {
               Informações iniciais do paciente
             </h2>
             <p className={helperClass}>
-              Preencha peso, altura e gênero antes de registrar os métodos avaliativos.
+              Preencha peso, altura e gênero antes de registrar os métodos
+              avaliativos.
             </p>
           </div>
 
@@ -204,8 +209,9 @@ export default function AvaliacaoPage() {
               Composição corporal em percentuais
             </h2>
             <p className={helperClass}>
-              Use apenas os percentuais principais do laudo: massa magra, gordura total,
-              gordura visceral, água corporal e idade metabólica.
+              Use apenas os percentuais principais do laudo: massa magra,
+              gordura total, gordura visceral, água corporal e idade
+              metabólica.
             </p>
           </div>
 
@@ -574,8 +580,8 @@ export default function AvaliacaoPage() {
                 Risco cardiometabólico
               </h2>
               <p className={helperClass}>
-                O RCQ é calculado automaticamente a partir das medidas de
-                cintura e quadril informadas acima.
+                O RCQ é calculado automaticamente a partir das medidas de cintura
+                e quadril informadas acima.
               </p>
 
               <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3">
@@ -614,13 +620,21 @@ export default function AvaliacaoPage() {
           </div>
         </section>
 
-        {/* BOTÃO FINAL */}
-        <div className="flex justify-end">
+        {/* BOTÕES FINAIS */}
+        <div className="flex justify-between gap-3">
           <Button
             type="submit"
             className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-6"
           >
             Salvar avaliação
+          </Button>
+
+          <Button
+            type="button"
+            onClick={() => router.push('/metabolismo')}
+            className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-semibold px-6"
+          >
+            Avançar para Metabolismo →
           </Button>
         </div>
       </form>
