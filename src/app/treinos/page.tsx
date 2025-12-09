@@ -1,330 +1,296 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import TrainingSelector, {
-  TrainingSelection,
-} from '@/components/custom/training-selector';
+import { Dumbbell, Home, Bike, Activity, Flame, ChevronRight } from 'lucide-react';
 
-import fullDB, {
-  ExerciseRecord,
-} from '@/lib/full-training-database';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import fullTrainingDatabase from '@/lib/full-training-database';
 
-// -----------------------------------------------------------------------------
-// Helpers para montar o treino do dia
-// -----------------------------------------------------------------------------
+type ModalityId = 'musculacao' | 'casa' | 'corrida' | 'spinning' | 'crossfit';
 
-type MindsetModality = 'musculacao' | 'casa' | 'corrida' | 'spinning' | 'crossfit';
+type ExerciseRecord = {
+  id: string;
+  name: string;
+  modality: ModalityId;
+  group: string;
+  subgroup?: string;
+  level?: 'iniciante' | 'intermediario' | 'avancado';
+  series?: number;
+  reps?: string;
+  rest?: string;
+  tempo?: string;
+  intensity?: string;
+  notes?: string;
+};
 
-function mapSelectionToModality(sel: TrainingSelection | null): MindsetModality | null {
-  if (!sel) return null;
-  switch (sel.mode) {
-    case 'academia':
-      return 'musculacao';
-    case 'casa':
-      return 'casa';
-    case 'corrida':
-      return 'corrida';
-    case 'spinning':
-      return 'spinning';
-    case 'crossfit':
-      return 'crossfit';
-    default:
-      return null;
-  }
-}
-
-function estimateExerciseCount(time: number | null): number {
-  if (!time || time <= 0) return 6;
-  if (time <= 30) return 6;
-  if (time <= 45) return 8;
-  if (time <= 60) return 10;
-  return 12;
-}
-
-function buildDailyWorkout(
-  selection: TrainingSelection,
-  allExercises: ExerciseRecord[]
-): ExerciseRecord[] {
-  const modality = mapSelectionToModality(selection);
-  if (!modality) return [];
-
-  const baseList = allExercises.filter((ex) => ex.modality === modality);
-
-  if (baseList.length === 0) return [];
-
-  const target = estimateExerciseCount(selection.time);
-
-  // Para musculação/casa, tentamos variar grupos
-  if (modality === 'musculacao' || modality === 'casa') {
-    const byGroup = baseList.reduce<Record<string, ExerciseRecord[]>>((acc, ex) => {
-      if (!acc[ex.group]) acc[ex.group] = [];
-      acc[ex.group].push(ex);
-      return acc;
-    }, {});
-
-    const groups = Object.keys(byGroup);
-    const workout: ExerciseRecord[] = [];
-
-    let idx = 0;
-    while (workout.length < target && groups.length > 0) {
-      const group = groups[idx % groups.length];
-      const list = byGroup[group];
-      const candidate = list[Math.floor(Math.random() * list.length)];
-      if (!workout.find((w) => w.id === candidate.id)) {
-        workout.push(candidate);
-      }
-      idx++;
-      if (idx > 200) break;
-    }
-    return workout;
-  }
-
-  // Para corrida/spinning/crossfit pegamos “treinos completos”
-  const unique: ExerciseRecord[] = [];
-  for (const ex of baseList) {
-    if (!unique.find((u) => u.id === ex.id)) {
-      unique.push(ex);
-    }
-  }
-
-  const dayIndex = selection.dayIndex && selection.dayIndex > 0
-    ? selection.dayIndex
-    : 1;
-
-  const planIndex = (dayIndex - 1) % unique.length;
-  const chosen = unique[planIndex];
-
-  // Tratamos corrida/spinning/crossfit como 1 treino com descrição longa
-  return [chosen];
-}
-
-// -----------------------------------------------------------------------------
-// Componente principal
-// -----------------------------------------------------------------------------
+const modalities: {
+  id: ModalityId;
+  label: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
+  {
+    id: 'musculacao',
+    label: 'Musculação',
+    description: 'Treinos completos por grupamento muscular, com foco em performance e estética.',
+    icon: Dumbbell,
+  },
+  {
+    id: 'casa',
+    label: 'Casa / Funcional',
+    description: 'Treinos sem equipamento ou com cargas leves, perfeitos para casa ou viagens.',
+    icon: Home,
+  },
+  {
+    id: 'corrida',
+    label: 'Corrida',
+    description: 'Planilhas de corrida, intervalados, ritmados e treinos para provas.',
+    icon: Activity,
+  },
+  {
+    id: 'spinning',
+    label: 'Spinning',
+    description: 'Sessões completas em bike indoor, com cadência, subidas e HIIT.',
+    icon: Bike,
+  },
+  {
+    id: 'crossfit',
+    label: 'CrossFit',
+    description: 'WODs completos, combinando força, condicionamento e alta intensidade.',
+    icon: Flame,
+  },
+];
 
 export default function TreinosPage() {
-  const [selection, setSelection] = useState<TrainingSelection | null>(null);
-  const [dailyWorkout, setDailyWorkout] = useState<ExerciseRecord[]>([]);
+  const [currentModality, setCurrentModality] = useState<ModalityId>('musculacao');
 
-  const musculacaoList = useMemo(
-    () => fullDB.filter((ex) => ex.modality === 'musculacao'),
-    []
-  );
-  const casaList = useMemo(
-    () => fullDB.filter((ex) => ex.modality === 'casa'),
-    []
-  );
-  const corridaList = useMemo(
-    () => fullDB.filter((ex) => ex.modality === 'corrida'),
-    []
-  );
-  const spinningList = useMemo(
-    () => fullDB.filter((ex) => ex.modality === 'spinning'),
-    []
-  );
-  const crossfitList = useMemo(
-    () => fullDB.filter((ex) => ex.modality === 'crossfit'),
-    []
-  );
+  const db = (fullTrainingDatabase as ExerciseRecord[]) ?? [];
 
-  const handleConfigConfirm = (sel: TrainingSelection) => {
-    setSelection(sel);
-    const workout = buildDailyWorkout(sel, fullDB);
-    setDailyWorkout(workout);
-    console.log('[MindsetFit] Configuração de treino:', sel);
-    console.log('[MindsetFit] Treino do dia gerado:', workout);
-  };
+  const groupedByModality = useMemo(() => {
+    const map: Record<
+      ModalityId,
+      Record<string, ExerciseRecord[]>
+    > = {
+      musculacao: {},
+      casa: {},
+      corrida: {},
+      spinning: {},
+      crossfit: {},
+    };
 
-  const renderExerciseCard = (ex: ExerciseRecord) => (
-    <Card
-      key={ex.id}
-      className="bg-slate-950/60 border-slate-800 hover:border-cyan-500/40 transition-colors"
-    >
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold">
-          {ex.name}
-        </CardTitle>
-        <p className="text-[11px] text-slate-400">
-          {ex.group}
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-1 text-xs text-slate-200">
-        {typeof ex.series !== 'undefined' && (
-          <p>
-            <span className="text-slate-400">Séries:</span>{' '}
-            <span className="font-medium">{ex.series}</span>
-          </p>
-        )}
-        {ex.reps && (
-          <p>
-            <span className="text-slate-400">Repetições:</span>{' '}
-            <span className="font-medium">{ex.reps}</span>
-          </p>
-        )}
-        {ex.rest && (
-          <p>
-            <span className="text-slate-400">Descanso:</span>{' '}
-            <span className="font-medium">{ex.rest}</span>
-          </p>
-        )}
-        {ex.description && (
-          <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
-            {ex.description}
-          </p>
-        )}
-      </CardContent>
-    </Card>
-  );
+    for (const raw of db) {
+      const ex = raw as ExerciseRecord;
+
+      const modality: ModalityId =
+        ex.modality && ['musculacao', 'casa', 'corrida', 'spinning', 'crossfit'].includes(ex.modality)
+          ? ex.modality
+          : 'musculacao';
+
+      const group = ex.group || 'Geral';
+
+      if (!map[modality][group]) {
+        map[modality][group] = [];
+      }
+      map[modality][group].push(ex);
+    }
+
+    return map;
+  }, [db]);
+
+  const currentGroups = groupedByModality[currentModality] || {};
+  const totalExercises =
+    Object.values(currentGroups).reduce((acc, arr) => acc + arr.length, 0) || 0;
+
+  const currentModalityMeta = modalities.find((m) => m.id === currentModality)!;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 py-6 md:px-8 md:py-10 space-y-8">
-      {/* HEADER */}
-      <header className="space-y-2">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-pink-400">
-          Treinos & Performance
-        </p>
-        <h1 className="text-2xl md:text-3xl font-bold text-white">
-          Treinos personalizados e inteligentes
-        </h1>
-        <p className="text-slate-400 max-w-2xl text-sm md:text-base">
-          Defina modalidade, tempo disponível, nível e quantos dias você treina na
-          semana. O MindsetFit distribui grupamentos, monta o treino do dia
-          automaticamente e ainda oferece uma biblioteca completa por modalidade.
-        </p>
-      </header>
-
-      {/* BLOCO 1 — CONFIGURAÇÃO DO TREINO DA SEMANA */}
-      <section>
-        <TrainingSelector onConfirm={handleConfigConfirm} />
-      </section>
-
-      {/* BLOCO 2 — MEU TREINO DO DIA */}
-      <section className="space-y-3">
-        <h2 className="text-lg md:text-xl font-semibold text-white">
-          Meu treino de hoje
-        </h2>
-        <p className="text-xs text-slate-400 max-w-2xl">
-          Aqui aparece o treino gerado a partir da sua configuração acima: modalidade,
-          tempo, nível e posição na semana (Treino 1, 2, 3...).
-        </p>
-
-        <Card className="bg-slate-900/60 border-slate-800">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base md:text-lg text-white">
-              {selection
-                ? (() => {
-                    const mod = mapSelectionToModality(selection);
-                    const labelMap: Record<MindsetModality, string> = {
-                      musculacao: 'Musculação',
-                      casa: 'Treino em Casa',
-                      corrida: 'Corrida',
-                      spinning: 'Spinning / Bike',
-                      crossfit: 'Cross Training / Crossfit',
-                    };
-                    return `Treino do dia • ${
-                      mod ? labelMap[mod] : 'Selecione uma modalidade'
-                    }`;
-                  })()
-                : 'Treino do dia • Configure seu treino acima'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {dailyWorkout.length === 0 ? (
-              <p className="text-sm text-slate-400">
-                Assim que você configurar o treino da semana e escolher o treino de
-                hoje, o app monta automaticamente a lista de exercícios aqui.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                  {dailyWorkout.map(renderExerciseCard)}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* BLOCO 3 — BIBLIOTECA COMPLETA POR MODALIDADE */}
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-lg md:text-xl font-semibold text-white">
-            Biblioteca de Treinos • MindsetFit Premium
-          </h2>
-          <p className="text-xs text-slate-400 max-w-2xl">
-            Explore todos os exercícios e treinos cadastrados no seu banco premium,
-            separados por modalidade. Use como referência para montar, ajustar ou
-            evoluir seus treinos ao longo das semanas.
+      {/* HEADER PRINCIPAL */}
+      <header className="space-y-4">
+        <div className="text-center">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-400">
+            Treinos & Performance
+          </p>
+          <h1 className="mt-1 text-3xl md:text-4xl font-extrabold tracking-tight">
+            <span className="bg-gradient-to-r from-cyan-400 to-sky-500 bg-clip-text text-transparent">
+              Treinos
+            </span>
+          </h1>
+          <p className="mt-2 text-slate-400 text-sm md:text-base max-w-2xl mx-auto">
+            Escolha a modalidade, visualize os treinos completos por grupamento muscular
+            e siga as orientações de séries, repetições, descanso e intensidade.
           </p>
         </div>
 
-        <Card className="bg-slate-900/60 border-slate-800">
-          <CardContent className="pt-6">
-            <Tabs defaultValue="musculacao" className="w-full">
-              <TabsList className="grid w-full grid-cols-5 bg-slate-800/50">
-                <TabsTrigger value="musculacao">Musculação</TabsTrigger>
-                <TabsTrigger value="casa">Casa</TabsTrigger>
-                <TabsTrigger value="corrida">Corrida</TabsTrigger>
-                <TabsTrigger value="spinning">Spinning</TabsTrigger>
-                <TabsTrigger value="crossfit">Crossfit</TabsTrigger>
-              </TabsList>
+        {/* LISTA DE MODALIDADES — IGUAL AO PRINT */}
+        <section className="max-w-2xl mx-auto space-y-3">
+          {modalities.map((mod) => {
+            const Icon = mod.icon;
+            const isActive = currentModality === mod.id;
 
-              {/* Musculação */}
-              <TabsContent value="musculacao" className="mt-6 space-y-4">
-                <h3 className="text-sm font-semibold text-slate-100">
-                  Musculação — todos os grupamentos
-                </h3>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {musculacaoList.map(renderExerciseCard)}
+            return (
+              <button
+                key={mod.id}
+                type="button"
+                onClick={() => {
+                  setCurrentModality(mod.id);
+                  // rolagem suave até a área dos treinos
+                  const target = document.getElementById('modality-detail');
+                  if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
+                className={`w-full flex items-center justify-between rounded-2xl px-5 py-4 md:px-6 md:py-5 transition-all border
+                  ${
+                    isActive
+                      ? 'bg-slate-900/90 border-cyan-500/60 shadow-[0_0_40px_rgba(34,211,238,0.30)]'
+                      : 'bg-slate-900/70 border-slate-800 hover:border-cyan-500/40 hover:bg-slate-900'
+                  }`}
+              >
+                <div className="flex items-center gap-4">
+                  <div
+                    className={`flex h-11 w-11 items-center justify-center rounded-2xl border
+                      ${
+                        isActive
+                          ? 'border-cyan-400/70 bg-cyan-500/10'
+                          : 'border-slate-700 bg-slate-900'
+                      }`}
+                  >
+                    <Icon
+                      className={`h-6 w-6 ${
+                        isActive ? 'text-cyan-400' : 'text-slate-200'
+                      }`}
+                    />
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="text-lg md:text-xl font-semibold text-slate-50">
+                      {mod.label}
+                    </span>
+                    <span className="text-xs md:text-sm text-slate-400 text-left">
+                      {mod.description}
+                    </span>
+                  </div>
                 </div>
-              </TabsContent>
+                <ChevronRight
+                  className={`h-5 w-5 ${
+                    isActive ? 'text-cyan-400' : 'text-slate-500'
+                  }`}
+                />
+              </button>
+            );
+          })}
+        </section>
+      </header>
 
-              {/* Casa */}
-              <TabsContent value="casa" className="mt-6 space-y-4">
-                <h3 className="text-sm font-semibold text-slate-100">
-                  Treino em Casa — exercícios funcionais e com pouca carga
-                </h3>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {casaList.map(renderExerciseCard)}
-                </div>
-              </TabsContent>
+      {/* ÁREA DE DETALHES DA MODALIDADE SELECIONADA */}
+      <main
+        id="modality-detail"
+        className="max-w-6xl mx-auto space-y-6 border-t border-slate-800 pt-6"
+      >
+        {/* CABEÇALHO DA MODALIDADE ATUAL */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-400">
+              Modalidade selecionada
+            </p>
+            <h2 className="mt-1 text-2xl font-bold text-slate-50">
+              {currentModalityMeta.label}
+            </h2>
+            <p className="text-xs md:text-sm text-slate-400 max-w-xl">
+              {currentModalityMeta.description}
+            </p>
+          </div>
 
-              {/* Corrida */}
-              <TabsContent value="corrida" className="mt-6 space-y-4">
-                <h3 className="text-sm font-semibold text-slate-100">
-                  Corrida — planilhas e treinos estruturados
-                </h3>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {corridaList.map(renderExerciseCard)}
-                </div>
-              </TabsContent>
+          <div className="flex gap-3">
+            <div className="rounded-2xl bg-slate-900/80 border border-slate-700 px-4 py-3 text-right">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                Grupamentos
+              </p>
+              <p className="text-lg font-semibold text-slate-50">
+                {Object.keys(currentGroups).length || 0}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-slate-900/80 border border-slate-700 px-4 py-3 text-right">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                Exercícios
+              </p>
+              <p className="text-lg font-semibold text-cyan-400">
+                {totalExercises}
+              </p>
+            </div>
+          </div>
+        </div>
 
-              {/* Spinning */}
-              <TabsContent value="spinning" className="mt-6 space-y-4">
-                <h3 className="text-sm font-semibold text-slate-100">
-                  Spinning / Bike Indoor — treinos por nível
-                </h3>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {spinningList.map(renderExerciseCard)}
-                </div>
-              </TabsContent>
+        {/* LISTA DE GRUPAMENTOS + EXERCÍCIOS */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {Object.entries(currentGroups).map(([groupName, exercises]) => (
+            <Card
+              key={groupName}
+              className="bg-slate-900/70 border-slate-800 hover:border-cyan-500/40 transition-colors"
+            >
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base md:text-lg text-slate-50 flex items-center justify-between">
+                  <span>{groupName}</span>
+                  <span className="text-xs font-normal text-slate-400">
+                    {exercises.length} exercício
+                    {exercises.length === 1 ? '' : 's'}
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
+                {exercises.map((ex) => {
+                  const detailParts: string[] = [];
 
-              {/* Crossfit */}
-              <TabsContent value="crossfit" className="mt-6 space-y-4">
-                <h3 className="text-sm font-semibold text-slate-100">
-                  Cross Training / Crossfit — WODs completos
-                </h3>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {crossfitList.map(renderExerciseCard)}
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </section>
+                  if (ex.series) detailParts.push(`${ex.series} séries`);
+                  if (ex.reps) detailParts.push(`${ex.reps} repetições`);
+                  if (ex.tempo) detailParts.push(`Tempo: ${ex.tempo}`);
+                  if (ex.intensity) detailParts.push(`Intensidade: ${ex.intensity}`);
+                  if (ex.rest) detailParts.push(`Descanso: ${ex.rest}`);
+
+                  const detailLine =
+                    detailParts.length > 0 ? detailParts.join(' • ') : null;
+
+                  return (
+                    <div
+                      key={ex.id}
+                      className="rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-sm"
+                    >
+                      <p className="font-medium text-slate-50">{ex.name}</p>
+                      {detailLine && (
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          {detailLine}
+                        </p>
+                      )}
+                      {ex.notes && (
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          {ex.notes}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          ))}
+
+          {Object.keys(currentGroups).length === 0 && (
+            <div className="col-span-full flex flex-col items-center justify-center py-10 text-center">
+              <p className="text-sm text-slate-400">
+                Ainda não há exercícios cadastrados para essa modalidade.
+              </p>
+              <Button
+                className="mt-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950"
+                type="button"
+                onClick={() => setCurrentModality('musculacao')}
+              >
+                Voltar para Musculação
+              </Button>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
