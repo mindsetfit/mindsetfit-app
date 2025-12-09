@@ -1,4 +1,19 @@
-// FULL TRAINING DATABASE — versão corrigida (sem Core / Abdômen quebrado)
+// FULL TRAINING DATABASE — versão robusta e defensiva
+
+export type ExerciseRecord = {
+  id: string;
+  group: string;
+  name: string;
+  series?: string | number;
+  reps?: string;
+  rest?: string;
+  description?: string;
+  modality: 'musculacao' | 'casa' | 'corrida' | 'spinning' | 'crossfit';
+};
+
+// ----------------------------------------
+// Imports brutos dos módulos de exercícios
+// ----------------------------------------
 
 import * as peitoData from '@/data/exercises/peito';
 import * as costasData from '@/data/exercises/costas';
@@ -8,150 +23,208 @@ import * as tricepsData from '@/data/exercises/triceps';
 import * as quadricepsData from '@/data/exercises/quadriceps';
 import * as posteriorData from '@/data/exercises/posterior';
 import * as gluteosData from '@/data/exercises/gluteos';
-// ❌ REMOVIDO: coreData (arquivo não existe)
 import * as panturrilhaData from '@/data/exercises/panturrilha';
 import * as antebracoData from '@/data/exercises/antebraco';
 
-import home_training from '@/data/exercises/home_training';
-import corrida_extra from '@/data/exercises/corrida';
-import spinning_extra from '@/data/exercises/spinning';
-import cross_training from '@/data/exercises/cross_training';
-
-export type ExerciseRecord = {
-  id: string;
-  group: string;
-  name: string;
-  series?: number;
-  reps?: string;
-  rest?: string;
-  description?: string;
-  modality: 'musculacao' | 'casa' | 'corrida' | 'spinning' | 'crossfit';
-};
+import * as homeData from '@/data/exercises/home_training';
+import * as spinningData from '@/data/exercises/spinning';
+import * as corridaData from '@/data/exercises/corrida';
+import * as crossData from '@/data/exercises/cross_training';
 
 // ----------------------------------------
-// Funções auxiliares
+// Helpers genéricos
 // ----------------------------------------
 
-function extractArray(mod: any): any[] {
-  const key = Object.keys(mod)[0];
-  return mod[key] || [];
+function extractFirstArray(mod: any): any[] {
+  if (!mod || typeof mod !== 'object') return [];
+  if (Array.isArray(mod.default)) return mod.default;
+
+  const keys = Object.keys(mod);
+  for (const k of keys) {
+    const value = (mod as any)[k];
+    if (Array.isArray(value)) return value;
+  }
+  return [];
 }
 
-function mapBodypart(arr: any[], label: string, modality: ExerciseRecord['modality']): ExerciseRecord[] {
-  return arr.map((item, index) => ({
-    id: `${modality}-${label}-${index}`,
-    group: label,
-    name: item.name || '',
-    reps: item.reps || item.repeticoes || undefined,
-    series: item.series || item.series || undefined,
-    rest: item.descanso || undefined,
-    description: item.description || item.execucao || undefined,
+function mapBodypart(
+  rawList: any[],
+  group: string,
+  modality: ExerciseRecord['modality']
+): ExerciseRecord[] {
+  if (!Array.isArray(rawList)) return [];
+  return rawList.map((ex: any, index: number) => ({
+    id: `${modality}-${group}-${index}`,
+    group,
+    name: ex?.name || ex?.title || `${group} exercício ${index + 1}`,
+    series:
+      ex?.series ||
+      ex?.sets ||
+      (typeof ex?.seriesReps !== 'undefined' ? String(ex.seriesReps) : undefined),
+    reps:
+      ex?.reps ||
+      ex?.repetitions ||
+      ex?.repsRange ||
+      (typeof ex?.seriesReps !== 'undefined' ? String(ex.seriesReps) : undefined),
+    rest: ex?.rest || ex?.restTime || ex?.interval || ex?.intervalo,
+    description:
+      ex?.description ||
+      ex?.execucao ||
+      (Array.isArray(ex?.tips) ? ex.tips.join(' • ') : undefined),
     modality,
   }));
 }
 
 // ----------------------------------------
-// GRUPOS DE MUSCULAÇÃO COMPLETOS
+// 1) Musculação
 // ----------------------------------------
 
-const musculacao = [
-  ...mapBodypart(extractArray(peitoData), 'Peito', 'musculacao'),
-  ...mapBodypart(extractArray(costasData), 'Costas', 'musculacao'),
-  ...mapBodypart(extractArray(ombrosData), 'Ombros', 'musculacao'),
-  ...mapBodypart(extractArray(bicepsData), 'Bíceps', 'musculacao'),
-  ...mapBodypart(extractArray(tricepsData), 'Tríceps', 'musculacao'),
-  ...mapBodypart(extractArray(quadricepsData), 'Quadríceps', 'musculacao'),
-  ...mapBodypart(extractArray(posteriorData), 'Posterior', 'musculacao'),
-  ...mapBodypart(extractArray(gluteosData), 'Glúteos', 'musculacao'),
-  ...mapBodypart(extractArray(panturrilhaData), 'Panturrilha', 'musculacao'),
-  ...mapBodypart(extractArray(antebracoData), 'Antebraço', 'musculacao'),
-  // ❌ REMOVIDO CORE, porque o arquivo não existe
+const musculacao: ExerciseRecord[] = [
+  ...mapBodypart(extractFirstArray(peitoData), 'Peito', 'musculacao'),
+  ...mapBodypart(extractFirstArray(costasData), 'Costas', 'musculacao'),
+  ...mapBodypart(extractFirstArray(ombrosData), 'Ombros', 'musculacao'),
+  ...mapBodypart(extractFirstArray(bicepsData), 'Bíceps', 'musculacao'),
+  ...mapBodypart(extractFirstArray(tricepsData), 'Tríceps', 'musculacao'),
+  ...mapBodypart(extractFirstArray(quadricepsData), 'Quadríceps', 'musculacao'),
+  ...mapBodypart(extractFirstArray(posteriorData), 'Posterior de coxa', 'musculacao'),
+  ...mapBodypart(extractFirstArray(gluteosData), 'Glúteos', 'musculacao'),
+  ...mapBodypart(extractFirstArray(panturrilhaData), 'Panturrilhas', 'musculacao'),
+  ...mapBodypart(extractFirstArray(antebracoData), 'Antebraço', 'musculacao'),
 ];
 
 // ----------------------------------------
-// CASA (home training)
+// 2) Casa (Home Training)
 // ----------------------------------------
 
-const casa = home_training?.exercicios?.map((ex: any, i: number) => ({
-  id: `casa-${i}`,
-  group: ex.group || 'Treino em Casa',
-  name: ex.name || '',
-  reps: ex.reps || ex.repeticoes || undefined,
-  series: ex.series || undefined,
-  rest: ex.descanso || undefined,
-  description: ex.description || ex.execucao || undefined,
-  modality: 'casa',
-})) || [];
+const homeArray = extractFirstArray(homeData);
+
+const casa: ExerciseRecord[] = Array.isArray(homeArray)
+  ? homeArray.map((ex: any, index: number) => ({
+      id: `casa-${index}`,
+      group: ex?.group || ex?.category || 'Corpo inteiro',
+      name: ex?.name || ex?.title || `Exercício em casa ${index + 1}`,
+      series:
+        ex?.series ||
+        ex?.sets ||
+        (typeof ex?.seriesReps !== 'undefined' ? String(ex.seriesReps) : undefined),
+      reps:
+        ex?.reps ||
+        ex?.repetitions ||
+        ex?.repsRange ||
+        (typeof ex?.seriesReps !== 'undefined' ? String(ex.seriesReps) : undefined),
+      rest: ex?.rest || ex?.restTime || ex?.interval || ex?.intervalo,
+      description:
+        ex?.description ||
+        ex?.execucao ||
+        (Array.isArray(ex?.tips) ? ex.tips.join(' • ') : undefined),
+      modality: 'casa',
+    }))
+  : [];
 
 // ----------------------------------------
-// CORRIDA
+// 3) Spinning
 // ----------------------------------------
 
-const corrida = corrida_extra?.planilhas?.flatMap((plan: any, i: number) =>
-  plan.treinos.map((t: any, idx: number) => ({
-    id: `corrida-${i}-${idx}`,
-    group: plan.level || 'Corrida',
-    name: t.name || '',
-    reps: undefined,
-    series: undefined,
-    rest: undefined,
-    description: t.description || '',
-    modality: 'corrida',
-  }))
-) || [];
+let spinning: ExerciseRecord[] = [];
+
+const spinningExtra = (spinningData as any).spinning_extra;
+if (spinningExtra && typeof spinningExtra === 'object') {
+  const levelKeys = Object.keys(spinningExtra);
+  for (const level of levelKeys) {
+    const list = spinningExtra[level];
+    if (!Array.isArray(list)) continue;
+    list.forEach((w: any, index: number) => {
+      spinning.push({
+        id: `spinning-${level}-${index}`,
+        group: 'Spinning / Bike indoor',
+        name: w?.name || w?.title || `Spinning ${level} #${index + 1}`,
+        series: undefined,
+        reps: undefined,
+        rest: w?.rest || w?.interval || undefined,
+        description:
+          (Array.isArray(w?.blocks) && w.blocks.join(' • ')) ||
+          w?.description ||
+          w?.estrutura ||
+          '',
+        modality: 'spinning',
+      });
+    });
+  }
+} else {
+  spinning = [];
+}
 
 // ----------------------------------------
-// SPINNING
+// 4) Corrida
 // ----------------------------------------
 
-const spinning = spinning_extra?.iniciante
-  .map((t: any, i: number) => ({
-    id: `spin-inic-${i}`,
-    group: 'Spinning',
-    name: t.name,
-    description: t.execucao || '',
-    reps: undefined,
-    series: undefined,
-    rest: undefined,
-    modality: 'spinning',
-  }))
-  .concat(
-    spinning_extra?.intermediario?.map((t: any, i: number) => ({
-      id: `spin-int-${i}`,
-      group: 'Spinning',
-      name: t.name,
-      description: t.execucao || '',
-      modality: 'spinning',
-    })) || [],
-    spinning_extra?.avancado?.map((t: any, i: number) => ({
-      id: `spin-adv-${i}`,
-      group: 'Spinning',
-      name: t.name,
-      description: t.execucao || '',
-      modality: 'spinning',
-    })) || []
-  );
+let corrida: ExerciseRecord[] = [];
+
+const corridaExtra = (corridaData as any).corrida_extra;
+if (corridaExtra && typeof corridaExtra === 'object') {
+  const levelKeys = Object.keys(corridaExtra);
+  for (const level of levelKeys) {
+    const plans = corridaExtra[level];
+    if (!Array.isArray(plans)) continue;
+    plans.forEach((plan: any, index: number) => {
+      corrida.push({
+        id: `corrida-${level}-${index}`,
+        group: 'Corrida',
+        name:
+          plan?.name ||
+          plan?.goal ||
+          `Planilha de corrida ${level} #${index + 1}`,
+        series: plan?.sessions ? String(plan.sessions) : undefined,
+        reps: undefined,
+        rest: undefined,
+        description:
+          (Array.isArray(plan?.days) && plan.days.join(' • ')) ||
+          plan?.description ||
+          '',
+        modality: 'corrida',
+      });
+    });
+  }
+} else {
+  corrida = [];
+}
 
 // ----------------------------------------
-// CROSSFIT
+// 5) Cross Training / Crossfit
 // ----------------------------------------
 
-const crossfit = cross_training?.wods?.map((w: any, i: number) => ({
-  id: `crossfit-${i}`,
-  group: w.level || 'CrossFit',
-  name: w.name,
-  description: w.description || '',
-  reps: undefined,
-  series: undefined,
-  rest: undefined,
-  modality: 'crossfit',
-})) || [];
+let crossfit: ExerciseRecord[] = [];
+
+const crossSource = extractFirstArray(crossData);
+if (Array.isArray(crossSource)) {
+  crossfit = crossSource.map((w: any, index: number) => ({
+    id: `crossfit-${index}`,
+    group: w?.level || 'Cross Training / Crossfit',
+    name: w?.name || w?.title || `WOD ${index + 1}`,
+    series: w?.rounds ? String(w.rounds) : undefined,
+    reps: w?.reps || undefined,
+    rest: w?.rest || undefined,
+    description:
+      (Array.isArray(w?.blocks) && w.blocks.join(' • ')) ||
+      (Array.isArray(w?.exercises) &&
+        w.exercises
+          .map((e: any) =>
+            [e?.reps, e?.name].filter(Boolean).join('x ')
+          )
+          .join(' • ')) ||
+      w?.description ||
+      '',
+    modality: 'crossfit',
+  }));
+} else {
+  crossfit = [];
+}
 
 // ----------------------------------------
-// UNIFICAÇÃO COMPLETA
+// Unificação final
 // ----------------------------------------
 
-const fullDB: ExerciseRecord[] = [
+const fullDBInternal: ExerciseRecord[] = [
   ...musculacao,
   ...casa,
   ...corrida,
@@ -159,7 +232,8 @@ const fullDB: ExerciseRecord[] = [
   ...crossfit,
 ];
 
-// Segurança: remove registros inválidos
-const sanitized = fullDB.filter((ex) => ex.name && ex.group);
+const fullDB = fullDBInternal.filter(
+  (ex) => !!ex.name && !!ex.group && !!ex.modality
+);
 
-export default sanitized;
+export default fullDB;
