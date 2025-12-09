@@ -156,6 +156,17 @@ export default function NutricaoPage() {
           </section>
         </div>
       </div>
+
+      {/* Ações finais / próxima etapa */}
+      <div className="mt-8 flex justify-end">
+        <Button
+          type="button"
+          className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold px-6"
+          onClick={() => router.push('/treinos')}
+        >
+          Ir para Treinos →
+        </Button>
+      </div>
     </div>
   );
 }
