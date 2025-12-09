@@ -1,7 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { Activity, Apple, Dumbbell, FileText, Home, Moon, Settings, TrendingUp, User, Droplet, Clipboard } from 'lucide-react';
+import { 
+  Activity, 
+  Apple, 
+  Dumbbell, 
+  FileText, 
+  Home, 
+  Moon, 
+  Settings, 
+  TrendingUp, 
+  User, 
+  Droplet, 
+  Clipboard 
+} from 'lucide-react';
 
 interface SidebarProps {
   currentPage: string;
@@ -11,6 +23,7 @@ interface SidebarProps {
 export default function Sidebar({ currentPage, onPageChange }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  // 🔥 MENU INTEGRADO AO FLUXO COMPLETO (somente adições, nada removido)
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'assessment', label: 'Avaliação Física', icon: User },
@@ -18,6 +31,8 @@ export default function Sidebar({ currentPage, onPageChange }: SidebarProps) {
     { id: 'nutrition', label: 'Nutrição & Dieta', icon: Apple },
     { id: 'training', label: 'Treinos', icon: Dumbbell },
     { id: 'workout-logger', label: 'Registro de Treinos', icon: Clipboard },
+    { id: 'hydration', label: 'Hidratação', icon: Droplet },   // 🔥 ADICIONADO
+    { id: 'sleep', label: 'Sono', icon: Moon },                 // 🔥 ADICIONADO
     { id: 'progress', label: 'Progresso', icon: TrendingUp },
     { id: 'reports', label: 'Relatórios', icon: FileText },
   ];
