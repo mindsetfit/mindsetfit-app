@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import TrainingSelector, { TrainingSelection } from '@/components/custom/training-selector';
 import TrainingBuilder from '@/components/custom/training-builder';
 import WorkoutLogger from '@/components/custom/workout-logger';
 
 export default function TreinosPage() {
+  const router = useRouter();
   const [selection, setSelection] = useState<TrainingSelection | null>(null);
 
   const cardClass =
@@ -39,7 +41,6 @@ export default function TreinosPage() {
 
       {selection && (
         <>
-
           <section className={cardClass}>
             <h2 className="text-xl font-bold text-white">Montar treino personalizado</h2>
             <p className="text-slate-400 text-sm mb-2">
@@ -58,6 +59,25 @@ export default function TreinosPage() {
             </p>
             <WorkoutLogger />
           </section>
+
+          {/* Ações finais / navegação */}
+          <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <button
+              type="button"
+              onClick={() => router.push('/nutricao')}
+              className="px-4 py-2 rounded-lg border border-slate-600 text-slate-200 hover:bg-slate-800 transition"
+            >
+              ← Voltar para Nutrição
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.push('/dashboard')}
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-semibold shadow-lg transition"
+            >
+              Finalizar e ir ao Dashboard ✔
+            </button>
+          </div>
         </>
       )}
     </div>
