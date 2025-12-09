@@ -4,9 +4,9 @@ import { useState } from 'react';
 import TrainingSelector, { TrainingSelection } from '@/components/custom/training-selector';
 import TrainingBuilder from '@/components/custom/training-builder';
 import WorkoutLogger from '@/components/custom/workout-logger';
-import * as trainingGen from '@/utils/training-generator';
+import { generateTrainingPlan } from '@/utils/training-generator';
 
-type GeneratedWorkout = any; // podemos refinar depois com o tipo real
+type GeneratedWorkout = any; // depois refinamos com o tipo real
 
 export default function TreinosPage() {
   const [selection, setSelection] = useState<TrainingSelection | null>(null);
@@ -32,26 +32,14 @@ export default function TreinosPage() {
     setSelection(s);
 
     try {
-      // pega a função seja ela export default ou named
-      const generatorFn =
-        (trainingGen as any).generateTrainingPlan ||
-        (trainingGen as any).default;
-
-      if (typeof generatorFn !== 'function') {
-        console.error(
-          'Função generateTrainingPlan não encontrada em utils/training-generator.ts'
-        );
-        setGeneratedWorkouts([]);
-        return;
-      }
-
-      const plan = generatorFn(s);
+      const plan = generateTrainingPlan(s);
 
       if (Array.isArray(plan)) {
+        // caso a função já devolva um array de treinos
         setGeneratedWorkouts(plan);
         setHighlightIndex(0);
       } else if (plan && Array.isArray((plan as any).days)) {
-        // fallback se vier algo tipo { days: [...] }
+        // caso devolva algo como { days: [...] }
         setGeneratedWorkouts((plan as any).days);
         setHighlightIndex(0);
       } else {
