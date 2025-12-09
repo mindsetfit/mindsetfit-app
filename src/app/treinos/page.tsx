@@ -4,9 +4,29 @@ import { useState } from 'react';
 import TrainingSelector, { TrainingSelection } from '@/components/custom/training-selector';
 import TrainingBuilder from '@/components/custom/training-builder';
 import WorkoutLogger from '@/components/custom/workout-logger';
-import { generateTrainingPlan } from '@/utils/training-generator';
+import * as trainingGen from '@/utils/training-generator';
 
 type GeneratedWorkout = any; // depois refinamos com o tipo real
+
+function resolveGenerateFn(): ((s: TrainingSelection) => any) | null {
+  const candidates = [
+    (trainingGen as any).generateTrainingPlan,
+    (trainingGen as any).generatePlan,
+    (trainingGen as any).default,
+  ];
+
+  for (const fn of candidates) {
+    if (typeof fn === 'function') {
+      return fn as (s: TrainingSelection) => any;
+    }
+  }
+
+  console.error(
+    '[MindsetFit Treinos] Nenhuma função válida encontrada em utils/training-generator.ts. Módulo recebido:',
+    trainingGen
+  );
+  return null;
+}
 
 export default function TreinosPage() {
   const [selection, setSelection] = useState<TrainingSelection | null>(null);
@@ -32,7 +52,13 @@ export default function TreinosPage() {
     setSelection(s);
 
     try {
-      const plan = generateTrainingPlan(s);
+      const fn = resolveGenerateFn();
+      if (!fn) {
+        setGeneratedWorkouts([]);
+        return;
+      }
+
+      const plan = fn(s);
 
       if (Array.isArray(plan)) {
         // caso a função já devolva um array de treinos
@@ -43,11 +69,14 @@ export default function TreinosPage() {
         setGeneratedWorkouts((plan as any).days);
         setHighlightIndex(0);
       } else {
-        console.warn('Plano de treino retornado em formato inesperado:', plan);
+        console.warn(
+          '[MindsetFit Treinos] Plano de treino retornado em formato inesperado:',
+          plan
+        );
         setGeneratedWorkouts([]);
       }
     } catch (error) {
-      console.error('Erro ao gerar plano automático de treino:', error);
+      console.error('[MindsetFit Treinos] Erro ao gerar plano automático de treino:', error);
       setGeneratedWorkouts([]);
     }
   };
@@ -73,7 +102,7 @@ export default function TreinosPage() {
       {!selection && (
         <TrainingSelector
           onConfirm={(s) => {
-            console.log('Seleção confirmada:', s);
+            console.log('[MindsetFit Treinos] Seleção confirmada:', s);
             handleGenerate(s);
           }}
         />
