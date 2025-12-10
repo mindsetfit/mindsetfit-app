@@ -4,7 +4,7 @@ import TrainingSidebar from "@/components/custom/sidebar";
 import fullDB from "@/lib/full-training-database";
 
 export default function ModalityPage() {
-  const modality = Crossfit"; // <<< TROCAR AQUI EM CADA ARQUIVO
+  const modality = "crossfit"; // <<< TROCAR AQUI EM CADA ARQUIVO
 
   const list = fullDB.filter((ex) => ex.modality === modality);
 
