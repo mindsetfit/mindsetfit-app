@@ -1,13 +1,8 @@
 // FULL TRAINING DATABASE — Versão Premium MindsetFit
-// Organiza todos os exercícios em 5 modalidades:
-// musculação, casa, corrida, spinning e crossfit.
+// Integra musculação, casa (home premium), corrida, spinning e crossfit
+// em um único banco, usado pelo Training Builder Elite.
 
-export type ModalityId =
-  | "musculacao"
-  | "casa"
-  | "corrida"
-  | "spinning"
-  | "crossfit";
+export type ModalityId = 'musculacao' | 'casa' | 'corrida' | 'spinning' | 'crossfit';
 
 export type ExerciseRecord = {
   id: string;
@@ -15,7 +10,7 @@ export type ExerciseRecord = {
   modality: ModalityId;
   group: string;
   subgroup?: string;
-  level?: "iniciante" | "intermediario" | "avancado";
+  level?: 'iniciante' | 'intermediario' | 'avancado';
   series?: number | string;
   reps?: string;
   rest?: string;
@@ -25,46 +20,47 @@ export type ExerciseRecord = {
 };
 
 // ----------------------------------------------------
-// IMPORTAÇÕES OFICIAIS DA ESTRUTURA DO APP
+// IMPORTS DAS BASES
 // ----------------------------------------------------
 
-// Musculação (bases originais)
-import * as peitoData from "@/data/exercises/peito";
-import * as costasData from "@/data/exercises/costas";
-import * as ombrosData from "@/data/exercises/ombros";
-import * as bicepsData from "@/data/exercises/biceps";
-import * as tricepsData from "@/data/exercises/triceps";
-import * as quadricepsData from "@/data/exercises/quadriceps";
-import * as posteriorData from "@/data/exercises/posterior";
-import * as gluteosData from "@/data/exercises/gluteos";
-import * as panturrilhaData from "@/data/exercises/panturrilha";
-import * as antebracoData from "@/data/exercises/antebraco";
+// Musculação (academia) por grupamento
+import * as peitoData from '@/data/exercises/peito';
+import * as costasData from '@/data/exercises/costas';
+import * as ombrosData from '@/data/exercises/ombros';
+import * as bicepsData from '@/data/exercises/biceps';
+import * as tricepsData from '@/data/exercises/triceps';
+import * as quadricepsData from '@/data/exercises/quadriceps';
+import * as posteriorData from '@/data/exercises/posterior';
+import * as gluteosData from '@/data/exercises/gluteos';
+import * as panturrilhaData from '@/data/exercises/panturrilha';
+import * as antebracoData from '@/data/exercises/antebraco';
 
-// Aeróbicos / ciclismo / cross-training
-import * as corridaData from "@/data/exercises/corrida";
-import * as spinningData from "@/data/exercises/spinning";
-import * as crossData from "@/data/exercises/cross_training";
+// Casa — base premium
+import { home_premium, type HomeExercise } from '@/data/exercises/home_premium';
 
-// NOVA BASE PREMIUM — Exercícios "Em Casa"
-import homePremium from "@/data/exercises/home_premium";
+// Corrida / Spinning / Cross Training
+import * as corridaData from '@/data/exercises/corrida';
+import * as spinningData from '@/data/exercises/spinning';
+import * as crossData from '@/data/exercises/cross_training';
 
 // ----------------------------------------------------
-// HELPERS INTERNOS
+// HELPERS GENÉRICOS
 // ----------------------------------------------------
 
 function extractFirstArray(mod: any): any[] {
-  if (!mod || typeof mod !== "object") return [];
+  if (!mod || typeof mod !== 'object') return [];
   if (Array.isArray(mod.default)) return mod.default;
 
-  for (const key of Object.keys(mod)) {
-    const val = mod[key];
-    if (Array.isArray(val)) return val;
+  const keys = Object.keys(mod);
+  for (const k of keys) {
+    const value = (mod as any)[k];
+    if (Array.isArray(value)) return value;
   }
   return [];
 }
 
 function normalize(str: any): string {
-  return typeof str === "string" ? str.toLowerCase() : "";
+  return typeof str === 'string' ? str.toLowerCase() : '';
 }
 
 function buildExercise(
@@ -77,12 +73,12 @@ function buildExercise(
 ): ExerciseRecord {
   const tips =
     Array.isArray(base?.tips) && base.tips.length > 0
-      ? base.tips.join(" • ")
+      ? base.tips.join(' • ')
       : undefined;
 
   return {
     id: params.id,
-    name: base?.name || base?.title || "Exercício",
+    name: base?.name || base?.title || 'Exercício',
     modality: params.modality,
     group: params.group,
     subgroup: base?.category,
@@ -90,12 +86,16 @@ function buildExercise(
     series:
       base?.series ??
       base?.sets ??
-      (typeof base?.seriesReps !== "undefined" ? String(base.seriesReps) : undefined),
+      (typeof base?.seriesReps !== 'undefined'
+        ? String(base.seriesReps)
+        : undefined),
     reps:
       base?.reps ??
       base?.repetitions ??
       base?.repsRange ??
-      (typeof base?.seriesReps !== "undefined" ? String(base.seriesReps) : undefined),
+      (typeof base?.seriesReps !== 'undefined'
+        ? String(base.seriesReps)
+        : undefined),
     rest: base?.rest || base?.restTime || base?.interval || base?.intervalo,
     tempo: base?.tempo || base?.time,
     intensity: base?.intensity,
@@ -107,8 +107,25 @@ function buildExercise(
   };
 }
 
+// Converte um exercício da base home_premium para ExerciseRecord
+function mapHomeToRecord(ex: HomeExercise): ExerciseRecord {
+  return {
+    id: ex.id,
+    name: ex.name,
+    modality: 'casa',
+    group: ex.group,
+    level: ex.level,
+    series: ex.series,
+    reps: ex.reps,
+    rest: ex.rest,
+    tempo: ex.tempo,
+    intensity: ex.intensity,
+    notes: ex.notes,
+  };
+}
+
 // ----------------------------------------------------
-// ARRAYS FINAIS
+// 1) MUSCULAÇÃO (APENAS ACADEMIA)
 // ----------------------------------------------------
 
 const musculacao: ExerciseRecord[] = [];
@@ -117,154 +134,163 @@ let corrida: ExerciseRecord[] = [];
 let spinning: ExerciseRecord[] = [];
 let crossfit: ExerciseRecord[] = [];
 
-// ----------------------------------------------------
-// 1) MUSCULAÇÃO + AUTO-SEPARAÇÃO DE EXERCÍCIOS "EM CASA"
-// ----------------------------------------------------
+type GymModule = typeof peitoData;
 
-function processBodyPartModule(mod: any, groupLabel: string) {
-  const raw = extractFirstArray(mod);
-  raw.forEach((ex: any, index: number) => {
-    const isHome =
-      normalize(ex?.type).includes("casa") ||
-      normalize(ex?.type).includes("home");
-
-    const target = isHome ? casa : musculacao;
-
-    target.push(
+function processGymModule(mod: GymModule, groupLabel: string, slug: string) {
+  const rawList = extractFirstArray(mod);
+  rawList.forEach((ex: any, index: number) => {
+    musculacao.push(
       buildExercise(ex, {
-        id: `${isHome ? "casa" : "musculacao"}-${groupLabel}-${index}`,
+        id: `musculacao-${slug}-${index}`,
         group: groupLabel,
-        modality: isHome ? "casa" : "musculacao",
+        modality: 'musculacao',
       })
     );
   });
 }
 
-processBodyPartModule(peitoData, "Peito");
-processBodyPartModule(costasData, "Costas");
-processBodyPartModule(ombrosData, "Ombros");
-processBodyPartModule(bicepsData, "Bíceps");
-processBodyPartModule(tricepsData, "Tríceps");
-processBodyPartModule(quadricepsData, "Quadríceps");
-processBodyPartModule(posteriorData, "Posterior de coxa");
-processBodyPartModule(gluteosData, "Glúteos");
-processBodyPartModule(panturrilhaData, "Panturrilhas");
-processBodyPartModule(antebracoData, "Antebraço");
+processGymModule(peitoData, 'Peito', 'peito');
+processGymModule(costasData, 'Costas', 'costas');
+processGymModule(ombrosData, 'Ombros', 'ombros');
+processGymModule(bicepsData, 'Bíceps', 'biceps');
+processGymModule(tricepsData, 'Tríceps', 'triceps');
+processGymModule(quadricepsData, 'Quadríceps', 'quadriceps');
+processGymModule(posteriorData, 'Posterior de coxa', 'posterior');
+processGymModule(gluteosData, 'Glúteos', 'gluteos');
+processGymModule(panturrilhaData, 'Panturrilhas', 'panturrilha');
+processGymModule(antebracoData, 'Antebraço', 'antebraco');
 
 // ----------------------------------------------------
-// 2) CASA — BASE PREMIUM (100+ exercícios exclusivos)
+// 2) CASA — HOME PREMIUM
 // ----------------------------------------------------
 
-if (Array.isArray(homePremium) && homePremium.length > 0) {
-  homePremium.forEach((ex: any, index: number) => {
-    casa.push(
-      buildExercise(ex, {
-        id: `casa-premium-${index}`,
-        group: ex.group || "Treino em casa",
-        modality: "casa",
-      })
-    );
-  });
-}
+casa.push(...home_premium.map(mapHomeToRecord));
 
 // ----------------------------------------------------
-// 3) CORRIDA — planilhas completas
+// 3) CORRIDA — corrida_extra
 // ----------------------------------------------------
 
 const corridaExtra = (corridaData as any).corrida_extra;
 
-if (corridaExtra) {
-  Object.keys(corridaExtra).forEach((level) => {
-    corridaExtra[level].forEach((plan: any, index: number) => {
+if (corridaExtra && typeof corridaExtra === 'object') {
+  const levelKeys = Object.keys(corridaExtra);
+  levelKeys.forEach((levelKey) => {
+    const plans = corridaExtra[levelKey];
+    if (!Array.isArray(plans)) return;
+
+    plans.forEach((plan: any, index: number) => {
+      const daysText =
+        Array.isArray(plan?.days) && plan.days.length > 0
+          ? plan.days.join(' • ')
+          : undefined;
+
       corrida.push({
-        id: `corrida-${level}-${index}`,
-        name: plan?.name || plan?.goal || `Planilha ${level} #${index + 1}`,
-        modality: "corrida",
-        group: "Planilha de corrida",
+        id: `corrida-${levelKey}-${index}`,
+        name:
+          plan?.name ||
+          plan?.goal ||
+          `Planilha de corrida ${levelKey} #${index + 1}`,
+        modality: 'corrida',
+        group: 'Planilhas de corrida',
         level:
-          level === "iniciante"
-            ? "iniciante"
-            : level === "intermediario"
-            ? "intermediario"
-            : "avancado",
+          levelKey === 'iniciante'
+            ? 'iniciante'
+            : levelKey === 'intermediario'
+            ? 'intermediario'
+            : levelKey === 'avancado'
+            ? 'avancado'
+            : undefined,
         series: plan?.sessions,
+        reps: undefined,
+        rest: undefined,
         tempo: plan?.time,
         intensity: plan?.intensity,
-        notes:
-          Array.isArray(plan.days) && plan.days.length > 0
-            ? plan.days.join(" • ")
-            : plan?.description,
+        notes: daysText || plan?.description,
       });
     });
   });
 }
 
 // ----------------------------------------------------
-// 4) SPINNING — treinos completos
+// 4) SPINNING — spinning_extra
 // ----------------------------------------------------
 
 const spinningExtra = (spinningData as any).spinning_extra;
 
-if (spinningExtra) {
-  Object.keys(spinningExtra).forEach((level) => {
-    spinningExtra[level].forEach((w: any, index: number) => {
+if (spinningExtra && typeof spinningExtra === 'object') {
+  const levelKeys = Object.keys(spinningExtra);
+  levelKeys.forEach((levelKey) => {
+    const workouts = spinningExtra[levelKey];
+    if (!Array.isArray(workouts)) return;
+
+    workouts.forEach((w: any, index: number) => {
+      const blocksText =
+        Array.isArray(w?.blocks) && w.blocks.length > 0
+          ? w.blocks.join(' • ')
+          : undefined;
+
       spinning.push({
-        id: `spinning-${level}-${index}`,
-        name: w?.name || `Spinning ${level} #${index + 1}`,
-        modality: "spinning",
-        group: "Spinning / Bike Indoor",
+        id: `spinning-${levelKey}-${index}`,
+        name: w?.name || `Spinning ${levelKey} #${index + 1}`,
+        modality: 'spinning',
+        group: 'Spinning / Bike indoor',
         level:
-          level === "iniciante"
-            ? "iniciante"
-            : level === "intermediario"
-            ? "intermediario"
-            : "avancado",
+          levelKey === 'iniciante'
+            ? 'iniciante'
+            : levelKey === 'intermediario'
+            ? 'intermediario'
+            : levelKey === 'avancado'
+            ? 'avancado'
+            : undefined,
+        series: undefined,
+        reps: undefined,
+        rest: w?.rest || w?.interval,
         tempo: w?.time,
         intensity: w?.intensity,
-        notes:
-          Array.isArray(w?.blocks) && w.blocks.length > 0
-            ? w.blocks.join(" • ")
-            : w?.description,
+        notes: blocksText || w?.description,
       });
     });
   });
 }
 
 // ----------------------------------------------------
-// 5) CROSSFIT — WODs premium (30 modelos)
+// 5) CROSSFIT — cross_training
 // ----------------------------------------------------
 
-const crossRaw = extractFirstArray(crossData);
+const crossSource = extractFirstArray(crossData);
 
-crossfit =
-  crossRaw?.map((w: any, index: number) => {
-    const blocks =
+if (Array.isArray(crossSource) && crossSource.length > 0) {
+  crossfit = crossSource.map((w: any, index: number): ExerciseRecord => {
+    const blocksText =
       Array.isArray(w?.blocks) && w.blocks.length > 0
-        ? w.blocks.join(" • ")
+        ? w.blocks.join(' • ')
         : undefined;
 
-    let notes = blocks || w?.description;
+    let notes = blocksText || w?.description;
 
-    if (Array.isArray(w?.exercises)) {
-      const line = w.exercises
-        .map((e: any) => `${e?.reps}x ${e?.name}`)
-        .join(" • ");
-      notes = notes ? `${notes} • ${line}` : line;
+    if (Array.isArray(w?.exercises) && w.exercises.length > 0) {
+      const exLine = w.exercises
+        .map((e: any) =>
+          [e?.reps, e?.name].filter(Boolean).join('x ')
+        )
+        .join(' • ');
+      notes = notes ? `${notes} • ${exLine}` : exLine;
     }
+
+    const levelText = normalize(w?.level || w?.group || '');
 
     return {
       id: `crossfit-${index}`,
       name: w?.name || w?.title || `WOD ${index + 1}`,
-      modality: "crossfit",
-      group: w?.level || "Cross Training",
-      level:
-        normalize(w?.level).includes("iniciante")
-          ? "iniciante"
-          : normalize(w?.level).includes("intermedi")
-          ? "intermediario"
-          : normalize(w?.level).includes("avanc")
-          ? "avancado"
-          : undefined,
+      modality: 'crossfit',
+      group: w?.group || w?.level || 'Cross Training / CrossFit',
+      level: levelText.includes('iniciante')
+        ? 'iniciante'
+        : levelText.includes('intermedi')
+        ? 'intermediario'
+        : levelText.includes('avanc')
+        ? 'avancado'
+        : undefined,
       series: w?.rounds,
       reps: w?.reps,
       rest: w?.rest,
@@ -272,7 +298,8 @@ crossfit =
       intensity: w?.intensity,
       notes,
     };
-  }) || [];
+  });
+}
 
 // ----------------------------------------------------
 // 6) UNIFICAÇÃO FINAL
@@ -287,8 +314,7 @@ const fullDBInternal: ExerciseRecord[] = [
 ];
 
 const fullDB = fullDBInternal.filter(
-  (ex) => !!ex.name && !!ex.group && !!ex.modality
+  (ex) => ex.name && ex.group && ex.modality
 );
 
 export default fullDB;
-
