@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-
 type LevelFilter = 'todos' | 'iniciante' | 'intermediario' | 'avancado';
 
 type WorkoutExercise = ExerciseRecord & {
@@ -27,6 +26,41 @@ const MODALITIES: { id: ModalityId | 'todos'; label: string }[] = [
 ];
 
 const STORAGE_KEY = 'mindsetfit_training_builder_workout_v1';
+
+// ---------------------
+// Helpers de compartilhamento
+// ---------------------
+function buildShareText(workout: WorkoutExercise[]): string {
+  if (!workout || workout.length === 0) {
+    return 'Treino MindsetFit: nenhum exercício selecionado.';
+  }
+
+  const lines: string[] = [];
+
+  lines.push('Treino MindsetFit • Elite');
+  lines.push(`Total de exercícios: ${workout.length}`);
+  lines.push('');
+
+  workout.forEach((ex, idx) => {
+    const series = ex.customSeries || ex.series || '-';
+    const reps = ex.customReps || ex.reps || '-';
+    const rest = ex.customRest || ex.rest || '-';
+
+    lines.push(
+      `${idx + 1}) ${ex.name} (${ex.group}) — Séries: ${series} | Reps: ${reps} | Descanso: ${rest}`
+    );
+
+    if (ex.notes) {
+      lines.push(`   Notas: ${ex.notes}`);
+    }
+  });
+
+  lines.push('');
+  lines.push('Gerado automaticamente pelo MindsetFit.');
+
+  return lines.join('\n');
+}
+
 // ---------------------
 // PDF Generator Premium
 // ---------------------
@@ -69,7 +103,7 @@ function generatePDF(workout: WorkoutExercise[]) {
     theme: 'grid',
     styles: { fontSize: 10 },
     headStyles: {
-      fillColor: [0, 200, 255], // azul MindsetFit
+      fillColor: [0, 200, 255], // Azul MindsetFit
       textColor: 20,
     },
   });
@@ -95,13 +129,14 @@ function generatePDF(workout: WorkoutExercise[]) {
     );
   });
 
-  // Salva arquivo
-  doc.save('Treino-MindsetFit.pdf');
+  // Salva arquivo com nome padrão MindsetFit
+  doc.save('Treino_MindsetFit.pdf');
 }
 
-
 export default function TrainingBuilder() {
-  const [selectedModality, setSelectedModality] = useState<ModalityId | 'casa' | 'musculacao'>('musculacao');
+  const [selectedModality, setSelectedModality] = useState<
+    ModalityId | 'casa' | 'musculacao'
+  >('musculacao');
   const [selectedGroup, setSelectedGroup] = useState<string>('todos');
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('todos');
   const [search, setSearch] = useState('');
@@ -148,7 +183,8 @@ export default function TrainingBuilder() {
   const filteredExercises = useMemo(() => {
     return exercisesByModality.filter((ex) => {
       if (selectedGroup !== 'todos' && ex.group !== selectedGroup) return false;
-      if (levelFilter !== 'todos' && ex.level && ex.level !== levelFilter) return false;
+      if (levelFilter !== 'todos' && ex.level && ex.level !== levelFilter)
+        return false;
 
       if (search.trim()) {
         const q = search.toLowerCase();
@@ -199,6 +235,44 @@ export default function TrainingBuilder() {
 
   const handleClearWorkout = () => {
     setWorkout([]);
+  };
+
+  const handleShare = () => {
+    if (!workout.length) {
+      alert('Monte o treino antes de compartilhar.');
+      return;
+    }
+
+    const text = buildShareText(workout);
+
+    if (navigator.share) {
+      navigator
+        .share({
+          title: 'Treino MindsetFit',
+          text,
+        })
+        .catch(() => {
+          // usuário cancelou ou não compartilhou
+        });
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      alert(
+        'Resumo do treino copiado para a área de transferência. Cole no WhatsApp / Instagram.'
+      );
+    } else {
+      alert(text);
+    }
+  };
+
+  const handleWhatsApp = () => {
+    if (!workout.length) {
+      alert('Monte o treino antes de exportar para o WhatsApp.');
+      return;
+    }
+
+    const text = buildShareText(workout);
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
   };
 
   return (
@@ -367,7 +441,10 @@ export default function TrainingBuilder() {
                 {workout.length === 1 ? '' : 's'} selecionado
               </h3>
             </div>
-            {workout.length > 0 && (
+          </div>
+
+          {workout.length > 0 && (
+            <div className="flex flex-wrap justify-end gap-2 mb-2">
               <Button
                 type="button"
                 variant="outline"
@@ -376,9 +453,34 @@ export default function TrainingBuilder() {
               >
                 Limpar treino
               </Button>
-            )}
-            
-          </div>
+
+              <Button
+                type="button"
+                onClick={() => generatePDF(workout)}
+                className="h-8 px-3 text-[11px] bg-cyan-500 hover:bg-cyan-400 text-slate-900"
+              >
+                Gerar PDF Premium
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleShare}
+                className="h-8 px-3 text-[11px] border-slate-700 text-slate-300 hover:bg-slate-800"
+              >
+                Compartilhar
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleWhatsApp}
+                className="h-8 px-3 text-[11px] border-slate-700 text-emerald-300 hover:bg-slate-800"
+              >
+                WhatsApp
+              </Button>
+            </div>
+          )}
 
           {workout.length === 0 ? (
             <p className="text-xs text-slate-500">
@@ -429,29 +531,12 @@ export default function TrainingBuilder() {
                         placeholder={ex.series ? String(ex.series) : 'Ex: 3'}
                         className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-2 py-1 text-[11px] text-slate-50 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                       />
-                    <div className="flex justify-end gap-2">
-  {workout.length > 0 && (
-    <>
-      <Button
-        type="button"
-        variant="outline"
-        onClick={handleClearWorkout}
-        className="h-8 px-3 text-[11px] border-slate-700 text-slate-300 hover:bg-slate-800"
-      >
-        Limpar treino
-      </Button>
+                    </div>
 
-      <Button
-        type="button"
-        onClick={() => generatePDF(workout)}
-        className="h-8 px-3 text-[11px] bg-cyan-500 hover:bg-cyan-400 text-slate-900"
-      >
-        Gerar PDF Premium
-      </Button>
-    </>
-  )}
-</div>
-                      <p className="text-[10px] text-slate-400 mb-1">Repetições</p>
+                    <div>
+                      <p className="text-[10px] text-slate-400 mb-1">
+                        Repetições
+                      </p>
                       <input
                         type="text"
                         value={ex.customReps ?? ''}
@@ -462,6 +547,7 @@ export default function TrainingBuilder() {
                         className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-2 py-1 text-[11px] text-slate-50 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                       />
                     </div>
+
                     <div>
                       <p className="text-[10px] text-slate-400 mb-1">Descanso</p>
                       <input
@@ -490,3 +576,4 @@ export default function TrainingBuilder() {
     </div>
   );
 }
+

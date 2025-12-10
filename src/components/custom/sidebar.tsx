@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Dumbbell, Home, Bike, Run, Flame } from "lucide-react";
+import { Dumbbell, Home, Bike, Footprints, Flame } from "lucide-react";
 
 export default function TrainingSidebar() {
   return (
@@ -31,7 +31,7 @@ export default function TrainingSidebar() {
           href="/treinos/corrida"
           className="flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 text-slate-200 hover:text-white transition"
         >
-          <Run className="w-5 h-5 text-green-400" /> Corrida
+          <Footprints className="w-5 h-5 text-green-400" /> Corrida
         </Link>
 
         <Link
