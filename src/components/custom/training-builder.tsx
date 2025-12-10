@@ -1,267 +1,492 @@
-"use client";
+'use client';
 
-import React, { useMemo, useState } from "react";
-import {
-  trainingDatabase,
-  TrainingExercise,
-} from "@/database/training_database";
+import { useEffect, useMemo, useState } from 'react';
+import fullDB, {
+  type ExerciseRecord,
+  type ModalityId,
+} from '@/lib/full-training-database';
+import { Button } from '@/components/ui/button';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
-type MuscleKey = keyof typeof trainingDatabase;
 
-type ExerciseWithCategory = {
-  categoria: string;
-  exercise: TrainingExercise;
+type LevelFilter = 'todos' | 'iniciante' | 'intermediario' | 'avancado';
+
+type WorkoutExercise = ExerciseRecord & {
+  customSeries?: string;
+  customReps?: string;
+  customRest?: string;
 };
 
-const TrainingBuilder: React.FC = () => {
-  const muscleKeys = Object.keys(trainingDatabase) as MuscleKey[];
+const MODALITIES: { id: ModalityId | 'todos'; label: string }[] = [
+  { id: 'musculacao', label: 'Musculação' },
+  { id: 'casa', label: 'Casa / Funcional' },
+  { id: 'corrida', label: 'Corrida' },
+  { id: 'spinning', label: 'Spinning' },
+  { id: 'crossfit', label: 'CrossFit' },
+];
 
-  const [selectedMuscle, setSelectedMuscle] = useState<MuscleKey>(
-    (muscleKeys[0] as MuscleKey) || "peito"
-  );
-  const [selectedCategory, setSelectedCategory] = useState<string | "todas">(
-    "todas"
-  );
-  const [selectedExercises, setSelectedExercises] = useState<TrainingExercise[]>(
-    []
-  );
+const STORAGE_KEY = 'mindsetfit_training_builder_workout_v1';
+// ---------------------
+// PDF Generator Premium
+// ---------------------
+function generatePDF(workout: WorkoutExercise[]) {
+  if (!workout || workout.length === 0) {
+    alert('Nenhum exercício no treino para gerar PDF.');
+    return;
+  }
 
-  const currentGroup = trainingDatabase[selectedMuscle];
+  const doc = new jsPDF();
 
-  const categories = useMemo(
-    () => currentGroup?.categorias ?? [],
-    [currentGroup]
-  );
+  // Cabeçalho Premium
+  doc.setFontSize(18);
+  doc.text('MindsetFit • Treino Personalizado', 14, 20);
 
-  const exercisesWithCategory: ExerciseWithCategory[] = useMemo(() => {
-    if (!currentGroup) return [];
-    return currentGroup.categorias.flatMap((cat) =>
-      cat.exercicios.map((exercise) => ({
-        categoria: cat.nome,
-        exercise,
-      }))
+  doc.setFontSize(11);
+  doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 28);
+
+  // Resumo
+  doc.setFontSize(13);
+  doc.text('Resumo do Treino', 14, 40);
+
+  doc.setFontSize(11);
+  doc.text(`Total de exercícios: ${workout.length}`, 14, 47);
+
+  // Tabela principal
+  const tableData = workout.map((ex, idx) => [
+    idx + 1,
+    ex.name,
+    ex.group,
+    ex.customSeries || ex.series || '-',
+    ex.customReps || ex.reps || '-',
+    ex.customRest || ex.rest || '-',
+  ]);
+
+  autoTable(doc, {
+    head: [['#', 'Exercício', 'Grupo', 'Séries', 'Reps', 'Descanso']],
+    body: tableData,
+    startY: 60,
+    theme: 'grid',
+    styles: { fontSize: 10 },
+    headStyles: {
+      fillColor: [0, 200, 255], // azul MindsetFit
+      textColor: 20,
+    },
+  });
+
+  // Notas avançadas
+  let finalY = (doc as any).lastAutoTable?.finalY || 60;
+
+  doc.setFontSize(13);
+  doc.text('Notas / Execução Detalhada', 14, finalY + 10);
+
+  doc.setFontSize(10);
+
+  workout.forEach((ex, idx) => {
+    finalY += 8;
+    if (finalY > 280) {
+      doc.addPage();
+      finalY = 20;
+    }
+    doc.text(
+      `${idx + 1}) ${ex.name} — ${ex.notes ? ex.notes : 'Sem notas registradas.'}`,
+      14,
+      finalY
     );
-  }, [currentGroup]);
+  });
 
-  const filteredExercises: ExerciseWithCategory[] = useMemo(() => {
-    if (selectedCategory === "todas") return exercisesWithCategory;
-    return exercisesWithCategory.filter(
-      (item) => item.categoria === selectedCategory
+  // Salva arquivo
+  doc.save('Treino-MindsetFit.pdf');
+}
+
+
+export default function TrainingBuilder() {
+  const [selectedModality, setSelectedModality] = useState<ModalityId | 'casa' | 'musculacao'>('musculacao');
+  const [selectedGroup, setSelectedGroup] = useState<string>('todos');
+  const [levelFilter, setLevelFilter] = useState<LevelFilter>('todos');
+  const [search, setSearch] = useState('');
+  const [workout, setWorkout] = useState<WorkoutExercise[]>([]);
+
+  // Carregar treino salvo (se existir)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setWorkout(parsed);
+      }
+    } catch {
+      // ignora erro de parse
+    }
+  }, []);
+
+  // Salvar treino sempre que mudar
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(workout));
+    } catch {
+      // ignore
+    }
+  }, [workout]);
+
+  // Exercícios por modalidade selecionada
+  const exercisesByModality = useMemo(() => {
+    return fullDB.filter((ex) => ex.modality === selectedModality);
+  }, [selectedModality]);
+
+  // Lista de grupamentos disponíveis nessa modalidade
+  const groups = useMemo(() => {
+    const set = new Set<string>();
+    exercisesByModality.forEach((ex) => set.add(ex.group));
+    return ['todos', ...Array.from(set)];
+  }, [exercisesByModality]);
+
+  // Lista filtrada para o lado ESQUERDO (onde usuário escolhe)
+  const filteredExercises = useMemo(() => {
+    return exercisesByModality.filter((ex) => {
+      if (selectedGroup !== 'todos' && ex.group !== selectedGroup) return false;
+      if (levelFilter !== 'todos' && ex.level && ex.level !== levelFilter) return false;
+
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const text = `${ex.name} ${ex.group} ${ex.notes ?? ''}`.toLowerCase();
+        if (!text.includes(q)) return false;
+      }
+
+      return true;
+    });
+  }, [exercisesByModality, selectedGroup, levelFilter, search]);
+
+  const handleAddExercise = (ex: ExerciseRecord) => {
+    // evita duplicar se já estiver no treino com mesmo id
+    const exists = workout.find((w) => w.id === ex.id);
+    if (exists) return;
+
+    setWorkout((prev) => [
+      ...prev,
+      {
+        ...ex,
+        customSeries: ex.series ? String(ex.series) : '',
+        customReps: ex.reps ?? '',
+        customRest: ex.rest ?? '',
+      },
+    ]);
+  };
+
+  const handleRemoveExercise = (id: string) => {
+    setWorkout((prev) => prev.filter((w) => w.id !== id));
+  };
+
+  const handleUpdateField = (
+    id: string,
+    field: 'customSeries' | 'customReps' | 'customRest',
+    value: string
+  ) => {
+    setWorkout((prev) =>
+      prev.map((w) =>
+        w.id === id
+          ? {
+              ...w,
+              [field]: value,
+            }
+          : w
+      )
     );
-  }, [exercisesWithCategory, selectedCategory]);
+  };
 
-  const isSelected = (exercise: TrainingExercise) =>
-    selectedExercises.some((e) => e.id === exercise.id);
-
-  const toggleExercise = (exercise: TrainingExercise) => {
-    setSelectedExercises((prev) =>
-      prev.some((e) => e.id === exercise.id)
-        ? prev.filter((e) => e.id !== exercise.id)
-        : [...prev, exercise]
-    );
+  const handleClearWorkout = () => {
+    setWorkout([]);
   };
 
   return (
     <div className="w-full space-y-6">
-      {/* Título principal */}
+      {/* Cabeçalho */}
       <div className="space-y-2">
-        <h2 className="text-xl font-semibold tracking-tight">
-          Montagem do Treino • MindsetFit Engine v3.0
+        <h2 className="text-xl font-semibold tracking-tight text-white">
+          Montagem do Treino • MindsetFit Elite
         </h2>
-        <p className="text-sm text-muted-foreground">
-          Selecione o grupamento muscular, filtre por mini-categorias e monte o
-          seu treino de forma individualizada, com foco em técnica, variedade e
-          performance.
+        <p className="text-sm text-slate-400">
+          Use a base completa de exercícios para montar um treino cirúrgico:
+          selecione modalidade, grupamento, nível, filtre por nome e adicione os
+          exercícios ao seu treino do dia. Tudo fica salvo automaticamente.
         </p>
       </div>
 
-      {/* Seleção de Grupamento Muscular */}
-      <section className="space-y-2">
-        <h3 className="text-sm font-medium text-muted-foreground">
-          Grupamento muscular
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          {muscleKeys.map((key) => {
-            const isActive = key === selectedMuscle;
-            const label = trainingDatabase[key].label;
-            return (
+      {/* Filtros principais */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        {/* Modalidade */}
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-slate-300">Modalidade</p>
+          <div className="flex flex-wrap gap-2">
+            {MODALITIES.map((m) => (
               <button
-                key={key}
+                key={m.id}
                 type="button"
-                onClick={() => {
-                  setSelectedMuscle(key);
-                  setSelectedCategory("todas");
-                  setSelectedExercises([]);
-                }}
-                className={`px-5 py-2 rounded-full text-xs md:text-sm border transition ${
-                  isActive
-                    ? "bg-[#2EC4F3] text-[#020617] border-transparent shadow-md"
-                    : "bg-[#050816] text-slate-100 border-[#283548] hover:bg-[#0B1220]"
+                onClick={() => setSelectedModality(m.id as ModalityId)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+                  selectedModality === m.id
+                    ? 'bg-cyan-500 text-slate-950 border-cyan-400'
+                    : 'bg-slate-900/60 text-slate-300 border-slate-700 hover:border-slate-500'
                 }`}
               >
-                <span className="font-semibold">{label}</span>
+                {m.label}
               </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Mini-categorias */}
-      {currentGroup && (
-        <section className="space-y-2">
-          <h3 className="text-sm font-medium text-muted-foreground">
-            Mini-categorias de {currentGroup.label}
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setSelectedCategory("todas")}
-              className={`px-5 py-2 rounded-full text-xs md:text-sm border transition ${
-                selectedCategory === "todas"
-                  ? "bg-[#2EC4F3] text-[#020617] border-transparent shadow-md"
-                  : "bg-[#050816] text-slate-100 border-[#283548] hover:bg-[#0B1220]"
-              }`}
-            >
-              <span className="font-semibold">Todas</span>
-            </button>
-
-            {categories.map((cat) => {
-              const isActive = selectedCategory === cat.nome;
-              return (
-                <button
-                  key={cat.nome}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat.nome)}
-                  className={`px-5 py-2 rounded-full text-xs md:text-sm border transition ${
-                    isActive
-                      ? "bg-[#2EC4F3] text-[#020617] border-transparent shadow-md"
-                      : "bg-[#050816] text-slate-100 border-[#283548] hover:bg-[#0B1220]"
-                  }`}
-                >
-                  <span className="font-semibold">{cat.nome}</span>
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Toque nas mini-categorias para filtrar os exercícios de{" "}
-            {currentGroup.label.toLowerCase()} por foco específico (compostos,
-            máquinas, isoladores, variações avançadas, etc.).
-          </p>
-        </section>
-      )}
-
-      {/* Lista de exercícios */}
-      <section className="space-y-3">
-        <h3 className="text-sm font-medium text-muted-foreground">
-          Exercícios disponíveis
-        </h3>
-
-        {filteredExercises.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nenhum exercício encontrado para este filtro. Ajuste o grupamento ou
-            a mini-categoria.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {filteredExercises.map(({ categoria, exercise }) => {
-              const active = isSelected(exercise);
-              return (
-                <button
-                  key={exercise.id}
-                  type="button"
-                  onClick={() => toggleExercise(exercise)}
-                  className={`w-full text-left rounded-2xl border px-3 py-2.5 md:px-4 md:py-3 transition ${
-                    active
-                      ? "bg-[#07101F] border-[#2EC4F3] shadow-md"
-                      : "bg-background border-border hover:bg-muted/60"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold leading-tight">
-                        {exercise.nome}
-                      </p>
-                      <p className="text-[11px] md:text-xs text-muted-foreground">
-                        {categoria}
-                      </p>
-                    </div>
-                    {active && (
-                      <span className="text-[11px] md:text-xs font-medium px-2 py-1 rounded-full bg-[#2EC4F3] text-[#020617]">
-                        No meu treino
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] md:text-xs text-muted-foreground">
-                    <span className="px-2 py-0.5 rounded-full bg-muted">
-                      ⏱ {exercise.duracao}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full bg-muted">
-                      📊 {exercise.series}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full bg-muted">
-                      🧘 Descanso: {exercise.descanso}
-                    </span>
-                  </div>
-
-                  <p className="mt-2 text-[11px] md:text-xs italic text-muted-foreground">
-                    Dica técnica: {exercise.dica}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* Resumo do Treino do Usuário */}
-      <section className="space-y-2 border-t pt-4 mt-4">
-        <h3 className="text-sm font-medium text-muted-foreground">
-          Meu treino do dia ({selectedExercises.length} exercício
-          {selectedExercises.length === 1 ? "" : "s"})
-        </h3>
-
-        {selectedExercises.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Toque nos exercícios acima para adicionar ao seu treino. Você pode
-            montar combinações específicas por grupamento, nível e objetivo.
-          </p>
-        ) : (
-          <div className="space-y-1.5">
-            {selectedExercises.map((exercise) => (
-              <div
-                key={exercise.id}
-                className="flex items-start justify-between gap-2 rounded-xl bg-muted px-3 py-2"
-              >
-                <div>
-                  <p className="text-xs md:text-sm font-medium">
-                    {exercise.nome}
-                  </p>
-                  <p className="text-[11px] md:text-xs text-muted-foreground">
-                    {exercise.series} • {exercise.duracao} • Descanso:{" "}
-                    {exercise.descanso}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => toggleExercise(exercise)}
-                  className="text-[11px] md:text-xs text-muted-foreground hover:text-destructive"
-                >
-                  Remover
-                </button>
-              </div>
             ))}
           </div>
-        )}
+        </div>
 
-        <p className="text-[11px] md:text-xs text-muted-foreground">
-          Em breve, esta seleção poderá ser integrada com PDF, IA de treino e
-          histórico de evolução dentro do MindsetFit.
-        </p>
-      </section>
+        {/* Grupamento */}
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-slate-300">Grupamento</p>
+          <select
+            value={selectedGroup}
+            onChange={(e) => setSelectedGroup(e.target.value)}
+            className="w-full rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-50 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+          >
+            {groups.map((g) => (
+              <option key={g} value={g}>
+                {g === 'todos' ? 'Todos os grupamentos' : g}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Nível */}
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-slate-300">Nível</p>
+          <select
+            value={levelFilter}
+            onChange={(e) => setLevelFilter(e.target.value as LevelFilter)}
+            className="w-full rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-50 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+          >
+            <option value="todos">Todos</option>
+            <option value="iniciante">Iniciante</option>
+            <option value="intermediario">Intermediário</option>
+            <option value="avancado">Avançado</option>
+          </select>
+        </div>
+
+        {/* Busca */}
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-slate-300">Buscar exercício</p>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Ex: Supino, agachamento, HIIT..."
+            className="w-full rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-50 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+          />
+        </div>
+      </div>
+
+      {/* Duas colunas: base de exercícios / treino do usuário */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Coluna esquerda — lista de exercícios */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 space-y-3">
+          <div className="flex items-baseline justify-between">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                Banco de exercícios
+              </p>
+              <h3 className="text-sm font-semibold text-slate-50">
+                {filteredExercises.length} opções encontradas
+              </h3>
+            </div>
+          </div>
+
+          <div className="max-h-[420px] overflow-y-auto pr-1 space-y-2">
+            {filteredExercises.map((ex) => {
+              const alreadyInWorkout = workout.some((w) => w.id === ex.id);
+              return (
+                <div
+                  key={ex.id}
+                  className="rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-2 text-xs text-slate-200 flex flex-col gap-1"
+                >
+                  <div className="flex justify-between gap-2">
+                    <div className="flex-1">
+                      <p className="font-semibold text-slate-50 text-xs">
+                        {ex.name}
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        {ex.group}
+                        {ex.level && (
+                          <span className="ml-1 text-[10px] uppercase text-cyan-300">
+                            • {ex.level}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      disabled={alreadyInWorkout}
+                      onClick={() => handleAddExercise(ex)}
+                      className="h-7 px-3 text-[11px] bg-cyan-500 hover:bg-cyan-400 text-slate-950 disabled:bg-slate-700 disabled:text-slate-400"
+                    >
+                      {alreadyInWorkout ? 'Já adicionado' : 'Adicionar'}
+                    </Button>
+                  </div>
+
+                  {(ex.series || ex.reps || ex.rest) && (
+                    <p className="text-[11px] text-slate-400">
+                      {ex.series && <span>Séries: {ex.series} • </span>}
+                      {ex.reps && <span>Reps: {ex.reps} • </span>}
+                      {ex.rest && <span>Descanso: {ex.rest}</span>}
+                    </p>
+                  )}
+
+                  {ex.notes && (
+                    <p className="text-[11px] text-slate-500 line-clamp-2">
+                      {ex.notes}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+
+            {filteredExercises.length === 0 && (
+              <p className="text-xs text-slate-500">
+                Nenhum exercício encontrado com esses filtros. Ajuste a busca ou
+                o nível.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Coluna direita — treino do usuário */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 space-y-3">
+          <div className="flex items-baseline justify-between">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                Meu treino do dia
+              </p>
+              <h3 className="text-sm font-semibold text-slate-50">
+                {workout.length} exercício
+                {workout.length === 1 ? '' : 's'} selecionado
+              </h3>
+            </div>
+            {workout.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClearWorkout}
+                className="h-8 px-3 text-[11px] border-slate-700 text-slate-300 hover:bg-slate-800"
+              >
+                Limpar treino
+              </Button>
+            )}
+            
+          </div>
+
+          {workout.length === 0 ? (
+            <p className="text-xs text-slate-500">
+              Nenhum exercício selecionado ainda. Clique em &quot;Adicionar&quot; na
+              lista ao lado para montar seu treino.
+            </p>
+          ) : (
+            <div className="max-h-[420px] overflow-y-auto pr-1 space-y-3">
+              {workout.map((ex, index) => (
+                <div
+                  key={ex.id}
+                  className="rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-2 text-xs text-slate-200 space-y-2"
+                >
+                  <div className="flex justify-between gap-2">
+                    <div className="flex-1">
+                      <p className="font-semibold text-slate-50 text-xs">
+                        {index + 1}. {ex.name}
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        {ex.group}
+                        {ex.level && (
+                          <span className="ml-1 text-[10px] uppercase text-cyan-300">
+                            • {ex.level}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleRemoveExercise(ex.id)}
+                      className="h-7 px-3 text-[11px] border-slate-700 text-slate-300 hover:bg-slate-800"
+                    >
+                      Remover
+                    </Button>
+                  </div>
+
+                  {/* Campos editáveis: séries / reps / descanso */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <p className="text-[10px] text-slate-400 mb-1">Séries</p>
+                      <input
+                        type="text"
+                        value={ex.customSeries ?? ''}
+                        onChange={(e) =>
+                          handleUpdateField(ex.id, 'customSeries', e.target.value)
+                        }
+                        placeholder={ex.series ? String(ex.series) : 'Ex: 3'}
+                        className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-2 py-1 text-[11px] text-slate-50 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                      />
+                    <div className="flex justify-end gap-2">
+  {workout.length > 0 && (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleClearWorkout}
+        className="h-8 px-3 text-[11px] border-slate-700 text-slate-300 hover:bg-slate-800"
+      >
+        Limpar treino
+      </Button>
+
+      <Button
+        type="button"
+        onClick={() => generatePDF(workout)}
+        className="h-8 px-3 text-[11px] bg-cyan-500 hover:bg-cyan-400 text-slate-900"
+      >
+        Gerar PDF Premium
+      </Button>
+    </>
+  )}
+</div>
+                      <p className="text-[10px] text-slate-400 mb-1">Repetições</p>
+                      <input
+                        type="text"
+                        value={ex.customReps ?? ''}
+                        onChange={(e) =>
+                          handleUpdateField(ex.id, 'customReps', e.target.value)
+                        }
+                        placeholder={ex.reps ?? 'Ex: 10–12'}
+                        className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-2 py-1 text-[11px] text-slate-50 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 mb-1">Descanso</p>
+                      <input
+                        type="text"
+                        value={ex.customRest ?? ''}
+                        onChange={(e) =>
+                          handleUpdateField(ex.id, 'customRest', e.target.value)
+                        }
+                        placeholder={ex.rest ?? 'Ex: 60–90s'}
+                        className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-2 py-1 text-[11px] text-slate-50 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                      />
+                    </div>
+                  </div>
+
+                  {ex.notes && (
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      {ex.notes}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
-};
-
-export default TrainingBuilder;
+}
