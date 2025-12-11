@@ -230,7 +230,7 @@ function pickHiitExercisesForDay(
 export function generateTrainingPlan(
   options: GenerateTrainingPlanOptions,
 ): TrainingPlan {
-  const {
+const {
     strategyId,
     level,
     daysPerWeek,
@@ -244,7 +244,10 @@ export function generateTrainingPlan(
   );
 
   if (!strategy) {
-    throw new Error(`Estratégia de treino não encontrada: ${strategyId}`);
+    console.warn(
+      `Estratégia de treino não encontrada: ${String(strategyId)}. Retornando plano vazio.`
+    );
+    return null as any;
   }
 
   const finalDays = Math.min(
