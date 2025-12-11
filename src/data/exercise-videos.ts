@@ -1,60 +1,37 @@
 export const exerciseVideos = {
   supino_reto: {
-    video: "/videos/supino_reto.mp4",
-    muscles: ["Peitoral maior", "Tríceps", "Deltóide anterior"],
+    id: "supino_reto",
+    name: "Supino Reto",
+    muscles: ["Peito", "Tríceps", "Ombros"],
     tips: [
-      "Mantenha escápulas retraídas e estabilizadas.",
-      "Pés firmes no chão durante todo o movimento.",
-      "Desça a barra de forma controlada, sem perder tensão."
+      "Mantenha a escápula estabilizada",
+      "Pés firmes no chão",
+      "Controle a descida por 2 segundos"
     ],
     mistakes: [
-      "Abrir demais os cotovelos.",
-      "Perder estabilidade do punho.",
-      "Arqueamento excessivo da lombar."
+      "Abrir demais os cotovelos",
+      "Tirar o quadril do banco",
+      "Descer rápido demais"
     ],
-    variations: [
-      "Supino inclinado",
-      "Supino com halteres",
-      "Máquina convergente"
-    ]
-  },
-
-  puxada_frontal: {
-    video: "/videos/puxada_frontal.mp4",
-    muscles: ["Dorsal", "Bíceps", "Romboides"],
-    tips: [
-      "Puxe a barra em direção ao peito, sem balançar o tronco.",
-      "Mantenha o core firme durante todo o movimento.",
-      "Concentre-se em puxar com as costas, não só com os braços."
-    ],
-    mistakes: [
-      "Inclinar muito o tronco para trás.",
-      "Deixar a barra subir com impulso, sem controle."
-    ],
-    variations: [
-      "Puxada supinada",
-      "Remada baixa",
-      "Barra fixa assistida"
-    ]
+    variations: ["Supino inclinado", "Supino com halteres"],
+    video: null
   },
 
   agachamento_livre: {
-    video: "/videos/agachamento_livre.mp4",
-    muscles: ["Quadríceps", "Glúteos", "Posterior de coxa", "Core"],
+    id: "agachamento_livre",
+    name: "Agachamento Livre",
+    muscles: ["Quadríceps", "Glúteos", "Posteriores"],
     tips: [
-      "Mantenha a coluna neutra durante todo o movimento.",
-      "Desça no seu limite sem perder alinhamento de joelhos.",
-      "Empurre o chão com os pés, não com a lombar."
+      "Desça controlado",
+      "Joelhos acompanham o quadril",
+      "Coluna neutra"
     ],
     mistakes: [
-      "Joelhos colapsando para dentro.",
-      "Descer sem controle.",
-      "Curvar demais a lombar na subida."
+      "Joelho valgo",
+      "Descer colapsando a lombar",
+      "Dobrar demais os calcanhares"
     ],
-    variations: [
-      "Agachamento frontal",
-      "Agachamento búlgaro",
-      "Hack machine"
-    ]
+    variations: ["Agachamento frontal", "Agachamento búlgaro"],
+    video: null
   }
 };

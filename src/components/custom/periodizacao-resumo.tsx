@@ -1,5 +1,6 @@
 "use client";
 
+import HiitSessionBlock from "@/components/custom/hiit-session-block";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { generateTrainingPlan } from "@/lib/generate-training-plan";
@@ -259,6 +260,8 @@ export default function PeriodizacaoResumo() {
         <SessionExercisesSection plan={plan} />
 
 
+
+        <HiitSessionBlock plan={plan} />
 
         {/* Observação final */}
         <section className="border border-slate-800 rounded-xl bg-slate-900/60 p-4">
