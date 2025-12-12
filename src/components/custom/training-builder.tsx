@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+import TrainingLogTable, { TrainingSession } from "@/components/custom/training-log-table";
+
 type LevelFilter = 'todos' | 'iniciante' | 'intermediario' | 'avancado';
 
 type WorkoutExercise = ExerciseRecord & {
@@ -32,6 +34,17 @@ const STORAGE_KEY = 'mindsetfit_training_builder_workout_v1';
 // ---------------------
 function buildShareText(workout: WorkoutExercise[]): string {
   if (!workout || workout.length === 0) {
+  // ===== Premium: log por sessão (tabela) =====
+  const [sessions, setSessions] = React.useState<TrainingSession[]>([
+    {
+      id: "sessao_a",
+      title: "Sessão A",
+      rows: [
+        { id: "r1", exerciseId: "supino_reto_barra", sets: "4", reps: "8-10", rest: "90s", loadKg: "" },
+      ],
+    },
+  ]);
+
     return 'Treino MindsetFit: nenhum exercício selecionado.';
   }
 
@@ -287,7 +300,14 @@ export default function TrainingBuilder() {
           selecione modalidade, grupamento, nível, filtre por nome e adicione os
           exercícios ao seu treino do dia. Tudo fica salvo automaticamente.
         </p>
-      </div>
+      
+    {/* ===== Premium: Tabela por sessão ===== */}
+    <TrainingLogTable
+      sessions={sessions}
+      onChange={setSessions}
+      exerciseOptions={exerciseOptions ?? [{ id: "supino_reto_barra", name: "Supino reto com barra" }]}
+    />
+  </div>
 
       {/* Filtros principais */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -373,7 +393,9 @@ export default function TrainingBuilder() {
 
           <div className="max-h-[420px] overflow-y-auto pr-1 space-y-2">
             {filteredExercises.map((ex) => {
-              const alreadyInWorkout = workout.some((w) => w.id === ex.id);
+              const alreadyInWorkout = workout.some((w) => w.id === ex.id
+      );
+
               return (
                 <div
                   key={ex.id}
