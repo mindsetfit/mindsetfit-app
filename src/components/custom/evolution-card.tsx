@@ -1,8 +1,6 @@
 "use client";
 
 import LoadSparkline from "@/components/custom/load-sparkline";
-import { getInsight } from "@/lib/training-insights";
-
 export default function EvolutionCard({
   name,
   modality,
