@@ -18,6 +18,10 @@ export default function EvolutionCard({
 }) {
   const insight = getInsight(history.map((h) => h.kg));
 
+  const href = `/relatorio?modality=${encodeURIComponent(
+    modality
+  )}&q=${encodeURIComponent(name)}`;
+
   return (
     <div className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 space-y-2">
       <div className="flex justify-between items-start">
@@ -49,8 +53,8 @@ export default function EvolutionCard({
       </div>
 
       <a
-        href="/relatorio"
-        className="block text-center text-xs mt-2 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white"
+        href={href}
+        className="block text-center text-xs mt-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white"
       >
         Gerar relatório
       </a>
