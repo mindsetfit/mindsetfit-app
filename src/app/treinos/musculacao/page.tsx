@@ -6,7 +6,8 @@ import fullDB from "@/lib/full-training-database";
 import { useTrainingLoad, LoadHistoryEntry } from "@/hooks/useTrainingLoad";
 
 function fmtKg(n: number) {
-  return String(n).replace(".0", "");
+  const s = String(n);
+  return s.endsWith(".0") ? s.slice(0, -2) : s;
 }
 
 function fmtDate(t: number) {
@@ -30,6 +31,7 @@ export default function ModalityPage() {
 
   const [loads, setLoads] = useState<Record<string, string>>({});
   const [hist, setHist] = useState<Record<string, LoadHistoryEntry[]>>({});
+  const [savedPulse, setSavedPulse] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const initialLoads: Record<string, string> = {};
@@ -52,11 +54,19 @@ export default function ModalityPage() {
     setLoad(sessionLabel, item.id, value);
   }
 
+  function pulseSaved(id: string) {
+    setSavedPulse((p) => ({ ...p, [id]: true }));
+    window.setTimeout(() => {
+      setSavedPulse((p) => ({ ...p, [id]: false }));
+    }, 1200);
+  }
+
   function onCommit(item: any) {
     const sessionLabel = item.group || modality;
     const value = loads[item.id] ?? "";
     commitLoad(sessionLabel, item.id, value);
     setHist((prev) => ({ ...prev, [item.id]: getHistory(sessionLabel, item.id) }));
+    if (typeof window !== "undefined") pulseSaved(item.id);
   }
 
   return (
@@ -78,6 +88,7 @@ export default function ModalityPage() {
             const sessionLabel = item.group || modality;
             const stats = getStats(sessionLabel, item.id);
             const last5 = (hist[item.id] ?? []).slice(-5).reverse();
+            const isSaved = !!savedPulse[item.id];
 
             return (
               <div
@@ -90,10 +101,16 @@ export default function ModalityPage() {
                     <p className="text-slate-400 text-sm">{item.group}</p>
                   </div>
 
-                  <div className="min-w-[140px]">
-                    <label className="block text-[11px] text-slate-400 mb-1">
-                      Carga (kg)
-                    </label>
+                  <div className="min-w-[160px]">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[11px] text-slate-400">Carga (kg)</label>
+                      {isSaved && (
+                        <span className="text-[11px] text-emerald-300 border border-emerald-900/60 bg-emerald-950/30 rounded-full px-2 py-0.5">
+                          ✔ Salvo
+                        </span>
+                      )}
+                    </div>
+
                     <input
                       inputMode="decimal"
                       type="number"
@@ -118,7 +135,6 @@ export default function ModalityPage() {
                   </div>
                 </div>
 
-                {/* v1.0.2 — histórico */}
                 <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950/30 p-3">
                   <div className="flex items-center justify-between text-[11px]">
                     <div className="text-slate-400">
@@ -156,7 +172,8 @@ export default function ModalityPage() {
                     </div>
                   ) : (
                     <div className="mt-2 text-[11px] text-slate-500">
-                      Sem histórico ainda — preencha uma carga e saia do campo.
+                      Dica: preencha a carga e <span className="text-slate-300">saia do campo</span>{" "}
+                      para registrar no histórico.
                     </div>
                   )}
                 </div>
