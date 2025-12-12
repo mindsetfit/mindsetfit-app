@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 
 const KEY = "mindsetfit:sessions:v1";
 
@@ -85,6 +85,73 @@ export default function TrainingAIInsights() {
 
   const warnLow = totals.total > 0 && totals.pct < 50;
 
+  const [reportText, setReportText] = useState<string>("");
+
+  const buildReport = useCallback(() => {
+    const lines: string[] = [];
+    const now = new Date();
+    const date = now.toLocaleDateString("pt-BR");
+
+    lines.push("🏋️ MindsetFit — Relatório do Treino");
+    lines.push(`📅 ${date}`);
+    lines.push("");
+    lines.push(`✅ Preenchimento: ${totals.pct}% (${totals.filled}/${totals.total})`);
+
+    if (totals.top?.length) {
+      lines.push("");
+      lines.push("🔥 Top cargas:");
+      totals.top.forEach((r: any, i: number) => {
+        lines.push(`${i + 1}. ${r.name} — ${r.load} kg (${r.sessionLabel})`);
+      });
+    }
+
+    const pendentes = flat.filter((r: any) => !r.load || r.load <= 0).slice(0, 10);
+    if (pendentes.length) {
+      lines.push("");
+      lines.push("📝 Pendências (sem carga):");
+      pendentes.forEach((r: any, i: number) => {
+        lines.push(`${i + 1}. ${r.name} (${r.sessionLabel})`);
+      });
+      if (flat.filter((r: any) => !r.load || r.load <= 0).length > 10) {
+        lines.push("... (mais itens no app)");
+      }
+    }
+
+    if (totals.suggestions?.length) {
+      lines.push("");
+      lines.push("📈 Próximas progressões sugeridas:");
+      totals.suggestions.slice(0, 8).forEach((r: any, i: number) => {
+        lines.push(`${i + 1}. ${r.name} — ${r.next} (${r.sessionLabel})`);
+      });
+    }
+
+    lines.push("");
+    lines.push("🔁 Diretriz: manter execução perfeita e progredir gradualmente.");
+    return lines.join("\n");
+  }, [totals, flat]);
+
+  const onGenerateReport = () => {
+    setReportText(buildReport());
+  };
+
+  const onCopyReport = async () => {
+    if (!reportText) return;
+    try {
+      await navigator.clipboard.writeText(reportText);
+      alert("Relatório copiado ✅");
+    } catch {
+      // fallback simples
+      const ta = document.createElement("textarea");
+      ta.value = reportText;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      alert("Relatório copiado ✅");
+    }
+  };
+
+
   return (
     <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
       <div className="flex items-center justify-between gap-3">
@@ -156,5 +223,39 @@ export default function TrainingAIInsights() {
         </div>
       )}
     </div>
+      {/* ===== Relatório IA (copiar/WhatsApp) ===== */}
+      <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="text-sm font-semibold text-white">Relatório IA</div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onGenerateReport}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10"
+            >
+              Gerar relatório
+            </button>
+            <button
+              type="button"
+              onClick={onCopyReport}
+              disabled={!reportText}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/90 hover:bg-white/10 disabled:opacity-40"
+            >
+              Copiar
+            </button>
+          </div>
+        </div>
+
+        {reportText ? (
+          <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-white/80">
+            {reportText}
+          </pre>
+        ) : (
+          <div className="mt-2 text-xs text-white/60">
+            Gere um resumo pronto para enviar no WhatsApp/Instagram.
+          </div>
+        )}
+      </div>
+
   );
 }
