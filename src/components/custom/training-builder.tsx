@@ -1,6 +1,6 @@
 'use client';
 
-import {  useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import fullDB, {
   type ExerciseRecord,
   type ModalityId,
@@ -10,14 +10,6 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 import TrainingLogTable, { TrainingSession } from "@/components/custom/training-log-table";
-import TrainingAIInsights from "@/components/custom/training-ai-insights";
-
-/* ===== Premium Persistência (localStorage) ===== */
-const SESSIONS_STORAGE_KEY = "mindsetfit:sessions:v1";
-const safeParse = (raw: string | null) => {
-  try { return raw ? JSON.parse(raw) : null; } catch { return null; }
-};
-
 
 type LevelFilter = 'todos' | 'iniciante' | 'intermediario' | 'avancado';
 
@@ -43,6 +35,124 @@ const STORAGE_KEY = 'mindsetfit_training_builder_workout_v1';
 function buildShareText(workout: WorkoutExercise[]): string {
   if (!workout || workout.length === 0) {
   // ===== Premium: log por sessão (tabela) =====
+  const [sessions, setSessions] = React.useState<TrainingSession[]>([
+    {
+      id: "sessao_a",
+      title: "Sessão A",
+      rows: [
+        { id: "r1", exerciseId: "supino_reto_barra", sets: "4", reps: "8-10", rest: "90s", loadKg: "" },
+      ],
+    },
+  ]);
+
+    return 'Treino MindsetFit: nenhum exercício selecionado.';
+  }
+
+  const lines: string[] = [];
+
+  lines.push('Treino MindsetFit • Elite');
+  lines.push(`Total de exercícios: ${workout.length}`);
+  lines.push('');
+
+  workout.forEach((ex, idx) => {
+    const series = ex.customSeries || ex.series || '-';
+    const reps = ex.customReps || ex.reps || '-';
+    const rest = ex.customRest || ex.rest || '-';
+
+    lines.push(
+      `${idx + 1}) ${ex.name} (${ex.group}) — Séries: ${series} | Reps: ${reps} | Descanso: ${rest}`
+    );
+
+    if (ex.notes) {
+      lines.push(`   Notas: ${ex.notes}`);
+    }
+  });
+
+  lines.push('');
+  lines.push('Gerado automaticamente pelo MindsetFit.');
+
+  return lines.join('\n');
+}
+
+// ---------------------
+// PDF Generator Premium
+// ---------------------
+function generatePDF(workout: WorkoutExercise[]) {
+  if (!workout || workout.length === 0) {
+    alert('Nenhum exercício no treino para gerar PDF.');
+    return;
+  }
+
+  const doc = new jsPDF();
+
+  // Cabeçalho Premium
+  doc.setFontSize(18);
+  doc.text('MindsetFit • Treino Personalizado', 14, 20);
+
+  doc.setFontSize(11);
+  doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 28);
+
+  // Resumo
+  doc.setFontSize(13);
+  doc.text('Resumo do Treino', 14, 40);
+
+  doc.setFontSize(11);
+  doc.text(`Total de exercícios: ${workout.length}`, 14, 47);
+
+  // Tabela principal
+  const tableData = workout.map((ex, idx) => [
+    idx + 1,
+    ex.name,
+    ex.group,
+    ex.customSeries || ex.series || '-',
+    ex.customReps || ex.reps || '-',
+    ex.customRest || ex.rest || '-',
+  ]);
+
+  autoTable(doc, {
+    head: [['#', 'Exercício', 'Grupo', 'Séries', 'Reps', 'Descanso']],
+    body: tableData,
+    startY: 60,
+    theme: 'grid',
+    styles: { fontSize: 10 },
+    headStyles: {
+      fillColor: [0, 200, 255], // Azul MindsetFit
+      textColor: 20,
+    },
+  });
+
+  // Notas avançadas
+  let finalY = (doc as any).lastAutoTable?.finalY || 60;
+
+  doc.setFontSize(13);
+  doc.text('Notas / Execução Detalhada', 14, finalY + 10);
+
+  doc.setFontSize(10);
+
+  workout.forEach((ex, idx) => {
+    finalY += 8;
+    if (finalY > 280) {
+      doc.addPage();
+      finalY = 20;
+    }
+    doc.text(
+      `${idx + 1}) ${ex.name} — ${ex.notes ? ex.notes : 'Sem notas registradas.'}`,
+      14,
+      finalY
+    );
+  });
+
+  // Salva arquivo com nome padrão MindsetFit
+  doc.save('Treino_MindsetFit.pdf');
+}
+
+export default function TrainingBuilder() {
+  const [selectedModality, setSelectedModality] = useState<
+    ModalityId | 'casa' | 'musculacao'
+  >('musculacao');
+  const [selectedGroup, setSelectedGroup] = useState<string>('todos');
+  const [levelFilter, setLevelFilter] = useState<LevelFilter>('todos');
+  const [search, setSearch] = useState('');
   const [workout, setWorkout] = useState<WorkoutExercise[]>([]);
 
   // Carregar treino salvo (se existir)
@@ -187,8 +297,6 @@ function buildShareText(workout: WorkoutExercise[]): string {
         </h2>
         <p className="text-sm text-slate-400">
           Use a base completa de exercícios para montar um treino cirúrgico:
-
-    <TrainingAIInsights />
           selecione modalidade, grupamento, nível, filtre por nome e adicione os
           exercícios ao seu treino do dia. Tudo fica salvo automaticamente.
         </p>
