@@ -10,6 +10,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 import TrainingLogTable, { TrainingSession } from "@/components/custom/training-log-table";
+import TrainingAIInsights from "@/components/custom/training-ai-insights";
 
 /* ===== Premium Persistência (localStorage) ===== */
 const SESSIONS_STORAGE_KEY = "mindsetfit:sessions:v1";
@@ -324,6 +325,8 @@ export default function TrainingBuilder() {
         </h2>
         <p className="text-sm text-slate-400">
           Use a base completa de exercícios para montar um treino cirúrgico:
+
+    <TrainingAIInsights />
           selecione modalidade, grupamento, nível, filtre por nome e adicione os
           exercícios ao seu treino do dia. Tudo fica salvo automaticamente.
         </p>
