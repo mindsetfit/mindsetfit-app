@@ -17,7 +17,7 @@ export type ProgressSuggestion = {
 };
 
 export type LoadHistoryEntry = {
-  t: number; // epoch ms
+  t: number;
   kg: number;
 };
 
@@ -43,6 +43,13 @@ export function useTrainingLoad(planId?: string) {
   const keyHist = useCallback(
     (sessionLabel: string, exerciseId: string) =>
       `${baseKey}:hist:${toKey([sessionLabel, exerciseId])}`,
+    [baseKey]
+  );
+
+  // anti-spam: evita registrar histórico em sequência (cooldown)
+  const keyCd = useCallback(
+    (sessionLabel: string, exerciseId: string) =>
+      `${baseKey}:cd:${toKey([sessionLabel, exerciseId])}`,
     [baseKey]
   );
 
@@ -102,26 +109,33 @@ export function useTrainingLoad(planId?: string) {
 
   const commitLoad = useCallback(
     (sessionLabel: string, exerciseId: string, value: string) => {
-      // 1) salva o valor atual
       setLoad(sessionLabel, exerciseId, value);
 
-      // 2) registra histórico somente se for número válido > 0
       const kg = Number(String(value).replace(",", "."));
       if (!Number.isFinite(kg) || kg <= 0) return;
 
       const safe = clampNum(kg, 0, 500);
 
-      // evita spam: só registra se mudou em relação ao último registro
+      // cooldown anti-spam (800ms)
+      if (typeof window !== "undefined") {
+        const cdKey = keyCd(sessionLabel, exerciseId);
+        const lastT = Number(window.localStorage.getItem(cdKey) || "0");
+        const now = Date.now();
+        if (Number.isFinite(lastT) && now - lastT < 800) return;
+        window.localStorage.setItem(cdKey, String(now));
+      }
+
       const hist = getHistory(sessionLabel, exerciseId);
       const last = hist.length ? hist[hist.length - 1] : null;
       const lastKg = last?.kg ?? null;
 
+      // se igual, não registra
       if (lastKg !== null && Math.abs(lastKg - safe) < 0.0001) return;
 
       const next = [...hist, { t: Date.now(), kg: safe }].slice(-200);
       setHistory(sessionLabel, exerciseId, next);
     },
-    [getHistory, setHistory, setLoad]
+    [getHistory, keyCd, setHistory, setLoad]
   );
 
   const getStats = useCallback(
