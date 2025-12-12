@@ -1,33 +1,74 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import TrainingSidebar from "@/components/custom/sidebar";
+import fullDB from "@/lib/full-training-database";
+import { useTrainingLoad } from "@/hooks/useTrainingLoad";
+import EvolutionCard from "@/components/custom/evolution-card";
+
 export default function EvolucaoPage() {
+  const [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
+
+  const { getHistory, getStats } = useTrainingLoad("evolucao");
+
+  const exercises = useMemo(() => {
+    return fullDB.filter((ex) => {
+      if (filter !== "all" && ex.modality !== filter) return false;
+      if (query && !ex.name.toLowerCase().includes(query.toLowerCase()))
+        return false;
+      return true;
+    });
+  }, [filter, query]);
+
   return (
-    <main className="min-h-screen p-4 md:p-6 text-white">
-      <header className="space-y-2 mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold">Evolução</h1>
-        <p className="text-sm md:text-base text-gray-400">
-          Aqui você acompanha sua evolução ao longo do processo:
-          peso, percentual de gordura, medidas e performance nos treinos.
-        </p>
-      </header>
+    <div className="flex">
+      <TrainingSidebar />
 
-      <section className="space-y-4">
-        <div className="border border-gray-800 rounded-2xl bg-black/30 p-4 md:p-6">
-          <h2 className="text-lg font-semibold mb-2">Resumo da Evolução</h2>
-          <p className="text-sm text-gray-300">
-            Em breve: gráficos de peso, percentual de gordura, RCQ,
-            volume de treino e ranking interno gamificado do MindsetFit.
-          </p>
+      <main className="flex-1 p-10 space-y-6">
+        <h1 className="text-2xl font-bold text-white">Central de Evolução</h1>
+
+        <div className="flex gap-4">
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="bg-slate-900 border border-slate-800 text-white px-3 py-2 rounded-lg"
+          >
+            <option value="all">Todas</option>
+            <option value="musculacao">Musculação</option>
+            <option value="casa">Casa</option>
+            <option value="corrida">Corrida</option>
+            <option value="crossfit">Crossfit</option>
+            <option value="spinning">Spinning</option>
+          </select>
+
+          <input
+            placeholder="Buscar exercício..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="flex-1 bg-slate-900 border border-slate-800 text-white px-3 py-2 rounded-lg"
+          />
         </div>
 
-        <div className="border border-gray-800 rounded-2xl bg-black/20 p-4 md:p-6">
-          <h3 className="text-base font-semibold mb-2">Próximos recursos</h3>
-          <ul className="list-disc list-inside text-sm text-gray-300 space-y-1">
-            <li>Evolução semanal, mensal e total.</li>
-            <li>Gráfico de peso x percentual de gordura.</li>
-            <li>Histórico de treinos e cargas.</li>
-            <li>Ranking interno com pontos, níveis e badges.</li>
-          </ul>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {exercises.map((ex) => {
+            const session = ex.group || ex.modality;
+            const history = getHistory(session, ex.id);
+            const stats = getStats(session, ex.id);
+
+            return (
+              <EvolutionCard
+                key={ex.id}
+                name={ex.name}
+                modality={ex.modality}
+                history={history}
+                lastKg={stats.lastKg}
+                bestKg={stats.bestKg}
+              />
+            );
+          })}
         </div>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }
