@@ -1,5 +1,7 @@
 "use client";
 
+import EvolutionHub from "@/components/custom/evolution-hub";
+
 import { useMemo, useState } from "react";
 import TrainingSidebar from "@/components/custom/sidebar";
 import fullDB from "@/lib/full-training-database";
@@ -26,7 +28,21 @@ export default function EvolucaoPage() {
       <TrainingSidebar />
 
       <main className="flex-1 p-10 space-y-6">
-        <h1 className="text-2xl font-bold text-white">Central de Evolução</h1>
+
+        <EvolutionHub
+          items={(exercises ?? []).map((ex: any) => {
+            const session = ex.group || ex.modality;
+            const history = getHistory(session, ex.id);
+            return {
+              id: ex.id,
+              name: ex.name,
+              modality: ex.modality,
+              historyKgs: Array.isArray(history) ? history.map((h: any) => (typeof h === "number" ? h : h?.kg)).filter((n: any) => Number.isFinite(n)) : [],
+            };
+          })}
+        />
+
+<h1 className="text-2xl font-bold text-white">Central de Evolução</h1>
 
         <div className="flex gap-4">
           <select
