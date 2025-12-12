@@ -7,6 +7,80 @@ import { generateTrainingPlan } from "@/lib/generate-training-plan";
 import TrainingLogTable from "@/components/custom/training-log-table";
 import SessionExercisesSection from "@/components/custom/session-exercises-section";
 
+
+function buildPremiumSessions(args: {
+  sessionLabel: string;
+  defaultExercises: any[];
+  fallbackRest?: string;
+}) : TrainingSession[] {
+  const { sessionLabel, defaultExercises, fallbackRest } = args;
+
+  const rows = (defaultExercises || []).map((ex: any, idx: number) => {
+    const exerciseId = ex?.id || ex?.exerciseId || ex?.key || ex?.slug || "";
+    const name = ex?.name || ex?.title || ex?.label || ex?.exercise || "";
+
+    // Séries/Reps/Descanso: tenta respeitar o que vier do plano; senão usa defaults seguros
+    const sets = String(ex?.sets ?? ex?.series ?? 4);
+    const reps = String(ex?.reps ?? ex?.repeticoes ?? "8-10");
+    const rest = String(ex?.rest ?? ex?.descanso ?? fallbackRest ?? "90s");
+
+    return {
+      id: ex?.rowId || ex?.uuid || `r_${idx}`,
+      exerciseId: exerciseId || (name ? name.toLowerCase().replace(/\s+/g, "_") : `ex_${idx}`),
+      sets,
+      reps,
+      rest,
+      loadKg: "",
+    };
+  });
+
+  return [{
+    id: "sessao_" + sessionLabel.toLowerCase().replace(/\s+/g, "_"),
+    title: sessionLabel,
+    rows,
+  }];
+}
+
+
+function PremiumSessionTable(props: {
+  sessionLabel: string;
+  defaultExercises: any[];
+  optionsForSession: any[];
+}) {
+  const premiumSessions = buildPremiumSessions({
+    sessionLabel: props.sessionLabel,
+    defaultExercises: props.defaultExercises,
+    fallbackRest: "90s",
+  });
+
+  const exerciseOptions = (props.optionsForSession || [])
+    .map((o: any) => ({
+      id:
+        o?.id ||
+        o?.exerciseId ||
+        o?.key ||
+        o?.slug ||
+        (o?.name ? String(o.name).toLowerCase().replace(/\s+/g, "_") : ""),
+      name: o?.name || o?.title || o?.label || String(o?.id || o?.exerciseId || "Exercício"),
+    }))
+    .filter((x: any) => x.id && x.name);
+
+  return (
+    <div className="mt-4">
+      <TrainingLogTable
+        sessions={premiumSessions}
+        onChange={() => {}}
+        exerciseOptions={
+          exerciseOptions.length
+            ? exerciseOptions
+            : [{ id: "supino_reto_barra", name: "Supino reto com barra" }]
+        }
+      />
+    </div>
+  );
+}
+
+
 function buildPlanId(meta: any): string {
   const strategy = meta?.strategyId ?? "custom";
   const level = meta?.level ?? "na";
@@ -238,7 +312,7 @@ export default function PeriodizacaoResumo() {
                             ))}
                         </ul>
                       </div>
-                    ))}
+      ))}
                   </div>
 
                   {/* Registro de cargas / RPE / notas para o dia */}

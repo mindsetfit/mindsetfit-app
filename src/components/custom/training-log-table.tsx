@@ -50,7 +50,32 @@ export default function TrainingLogTable({
   exerciseOptions,
   className,
 }: Props) {
+  const LOCAL_STORAGE_KEY = "mindsetfit_training_log";
+
+  function loadPersisted() {
+    try {
+      return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "{}");
+    } catch {
+      return {};
+    }
+  }
+
+  function savePersisted(data: any) {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+  }
+
   const [openId, setOpenId] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    const persisted = loadPersisted();
+    sessions.forEach((s) => {
+      s.rows.forEach((r) => {
+        if (persisted[s.id]?.[r.id]?.loadKg) {
+          r.loadKg = persisted[s.id][r.id].loadKg;
+        }
+      });
+    });
+  }, []);
+
 
   function updateRow(sessionId: string, rowId: string, patch: Partial<SessionRow>) {
     const next = sessions.map((s) => {
@@ -62,6 +87,12 @@ export default function TrainingLogTable({
     });
     onChange(next);
   }
+
+  // Persistência automática
+  const persisted = loadPersisted();
+  persisted[sessionId] = persisted[sessionId] || {};
+  persisted[sessionId][rowId] = patch;
+  savePersisted(persisted);
 
   const openMeta = openId ? exerciseVideos[openId] : undefined;
 
