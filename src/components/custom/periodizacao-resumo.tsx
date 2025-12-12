@@ -42,7 +42,7 @@ function buildPremiumSessions(args: {
 }
 
 
-function PremiumSessionTable(props: {
+export function PremiumSessionTable(props: {
   sessionLabel: string;
   defaultExercises: any[];
   optionsForSession: any[];

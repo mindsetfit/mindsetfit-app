@@ -11,6 +11,13 @@ import autoTable from 'jspdf-autotable';
 
 import TrainingLogTable, { TrainingSession } from "@/components/custom/training-log-table";
 
+/* ===== Premium Persistência (localStorage) ===== */
+const SESSIONS_STORAGE_KEY = "mindsetfit:sessions:v1";
+const safeParse = (raw: string | null) => {
+  try { return raw ? JSON.parse(raw) : null; } catch { return null; }
+};
+
+
 type LevelFilter = 'todos' | 'iniciante' | 'intermediario' | 'avancado';
 
 type WorkoutExercise = ExerciseRecord & {
@@ -35,7 +42,27 @@ const STORAGE_KEY = 'mindsetfit_training_builder_workout_v1';
 function buildShareText(workout: WorkoutExercise[]): string {
   if (!workout || workout.length === 0) {
   // ===== Premium: log por sessão (tabela) =====
-  const [sessions, setSessions] = React.useState<TrainingSession[]>([
+  const [sessions, 
+  // ===== Wrapper: salva sessions e repassa para o setter original =====
+  const persistedSetSessions = (next: any) => {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(next));
+      }
+    } catch {}
+    // mantém fluxo original
+    setSessions(next);
+  };
+
+  // ===== Carrega sessions persistidas (se existir) =====
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = safeParse(localStorage.getItem(SESSIONS_STORAGE_KEY));
+    if (Array.isArray(saved) && saved.length) {
+      setSessions(saved);
+    }
+  }, []);
+setSessions] = React.useState<TrainingSession[]>([
     {
       id: "sessao_a",
       title: "Sessão A",
@@ -304,7 +331,7 @@ export default function TrainingBuilder() {
     {/* ===== Premium: Tabela por sessão ===== */}
     <TrainingLogTable
       sessions={sessions}
-      onChange={setSessions}
+      onChange={persistedSetSessions}
       exerciseOptions={exerciseOptions ?? [{ id: "supino_reto_barra", name: "Supino reto com barra" }]}
     />
   </div>
