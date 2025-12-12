@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import TrainingSidebar from "@/components/custom/sidebar";
 import fullDB from "@/lib/full-training-database";
 import { useTrainingLoad, LoadHistoryEntry } from "@/hooks/useTrainingLoad";
+import LoadSparkline from "@/components/custom/load-sparkline";
 
 function fmtKg(n: number) {
   const s = String(n);
@@ -87,7 +88,8 @@ export default function ModalityPage() {
 
             const sessionLabel = item.group || modality;
             const stats = getStats(sessionLabel, item.id);
-            const last5 = (hist[item.id] ?? []).slice(-5).reverse();
+            const history = hist[item.id] ?? [];
+            const last5 = history.slice(-5).reverse();
             const isSaved = !!savedPulse[item.id];
 
             return (
@@ -127,14 +129,16 @@ export default function ModalityPage() {
                       <div className="mt-2 text-[11px] text-slate-300">
                         <span className="text-slate-400">Progressão:</span>{" "}
                         <span className="text-white font-semibold">{prog.label}</span>{" "}
-                        <span className="text-slate-400">
-                          (próx.: {fmtKg(prog.nextKg)}kg)
-                        </span>
+                        <span className="text-slate-400">(próx.: {fmtKg(prog.nextKg)}kg)</span>
                       </div>
                     )}
                   </div>
                 </div>
 
+                {/* v1.0.3 — gráfico */}
+                <LoadSparkline points={history} />
+
+                {/* Histórico + stats */}
                 <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950/30 p-3">
                   <div className="flex items-center justify-between text-[11px]">
                     <div className="text-slate-400">
