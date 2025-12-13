@@ -14,7 +14,6 @@ export default function EvolutionCard({
   lastKg: number | null;
   bestKg: number | null;
 }) {
-  const insight = getInsight(history.map((h) => h.kg));
 
   const href = `/relatorio?modality=${encodeURIComponent(
     modality
@@ -28,17 +27,17 @@ export default function EvolutionCard({
           <p className="text-xs text-slate-400 capitalize">{modality}</p>
         </div>
 
-        {insight && (
+        { && (
           <span
             className={`text-xs px-2 py-1 rounded-full ${
-              insight.color === "emerald"
+              .color === "emerald"
                 ? "bg-emerald-900/40 text-emerald-300"
-                : insight.color === "amber"
+                : .color === "amber"
                 ? "bg-amber-900/40 text-amber-300"
                 : "bg-red-900/40 text-red-300"
             }`}
           >
-            {insight.label}
+            {.label}
           </span>
         )}
       </div>
