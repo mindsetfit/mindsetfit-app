@@ -27,19 +27,7 @@ export default function EvolutionCard({
           <p className="text-xs text-slate-400 capitalize">{modality}</p>
         </div>
 
-        { && (
-          <span
-            className={`text-xs px-2 py-1 rounded-full ${
-              .color === "emerald"
-                ? "bg-emerald-900/40 text-emerald-300"
-                : .color === "amber"
-                ? "bg-amber-900/40 text-amber-300"
-                : "bg-red-900/40 text-red-300"
-            }`}
-          >
-            {.label}
-          </span>
-        )}
+        
       </div>
 
       <LoadSparkline points={history} />
